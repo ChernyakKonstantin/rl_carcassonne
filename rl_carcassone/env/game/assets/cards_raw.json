@@ -1,0 +1,200 @@
+[
+    {
+        "type": 0,
+        "values": "FFFFFFFFFFRRRFFFFRFFFFRFF",
+        "properties": [0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,2,2,1,0,0,2,2,1,0,0],
+        "count": 9,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["F", "R", "F"]
+    },
+    {
+        "type": 1,
+        "values": "FFRFFFFRFFFFRFFFFRFFFFRFF",
+        "properties": [0,0,1,2,2,0,0,1,2,2,0,0,1,2,2,0,0,1,2,2,0,0,1,2,2],
+        "count": 8,
+        "rotations": [0, 90],
+        "property_types": ["F", "R", "F"]
+    },
+    {
+        "type": 2,
+        "values": "FFFFFFFFFFRRERRFFRFFFFRFF",
+        "properties": [0,0,0,0,0,0,0,0,0,0,1,1,null,2,2,3,3,4,5,5,3,3,4,5,5],
+        "count": 4,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["F", "R", "R", "F", "R", "F"]
+    },
+    {
+        "type": 3,
+        "values": "FFRFFFFRFFRRERRFFRFFFFRFF",
+        "properties": [0,0,1,2,2,0,0,1,2,2,3,3,null,4,4,5,5,6,7,7,5,5,6,7,7],
+        "count": 1,
+        "rotations": [0],
+        "property_types": ["F", "R", "F", "R", "R", "F", "R", "F"]
+    },
+    {
+        "type": 4,
+        "values": "FFFFFFFFFFFFAFFFFFFFFFFFF",
+        "properties": [1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
+        "count": 4,
+        "rotations": [0],
+        "property_types": ["A", "F"]
+    },
+    {
+        "type": 5,
+        "values": "FFFFFFFFFFFFARRFFFFFFFFFF",
+        "properties": [1,1,1,1,1,1,1,1,1,1,1,1,0,2,2,1,1,1,1,1,1,1,1,1,1],
+        "count": 2,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["A", "F", "R"]
+    },
+    {
+        "type": 6,
+        "values": "CCCCCFFFFFFFFFFFFFFFFFFFF",
+        "properties": [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        "count": 5,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F"]
+    },
+    {
+        "type": 7,
+        "values": "CFFFFCFFFFCFRRRCFRFFCFRFF",
+        "properties": [0,1,1,1,1,0,1,1,1,1,0,1,2,2,2,0,1,2,3,3,0,1,2,3,3],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F", "R", "F"]
+    },
+    {
+        "type": 8,
+        "values": "CFRFFCFRFFCFRRRCFFFFCFFFF",
+        "properties": [0,1,2,3,3,0,1,2,3,3,0,1,2,2,2,0,1,1,1,1,0,1,1,1,1],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F", "R", "F"]
+    },
+    {
+        "type": 9,
+        "values": "ECCCCCFFFFCFFFFCFFFFCFFFF",
+        "properties": [null,0,0,0,0,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2],
+        "count": 2,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "C", "F"]
+    },
+    {
+        "type": 10,
+        "values": "CFFFCCFFFCCFFFCCFFFCCFFFC",
+        "properties": [0,1,1,1,2,0,1,1,1,2,0,1,1,1,2,0,1,1,1,2,0,1,1,1,2],
+        "count": 3,
+        "rotations": [0, 90],
+        "property_types": ["C", "C", "F"]
+    },
+    {
+        "type": 11,
+        "values": "CCCCCFFFFFRRRRRFFFFFFFFFF",
+        "properties": [0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3],
+        "count": 4,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F", "R", "F"]
+    },
+    {
+        "type": 12,
+        "values": "CCCCCFFFFFRRERRFFRFFFFRFF",
+        "properties": [0,0,0,0,0,1,1,1,1,1,2,2,null,3,3,4,4,5,6,6,4,4,5,6,6],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F", "R", "R", "F", "R", "F"]
+    },
+    {
+        "type": 13,
+        "values": "CCCCCFFFFCFFFFCFFFFCFFFFC",
+        "properties": [0,0,0,0,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F"]
+    },
+    {
+        "type": 14,
+        "values": "CCCCCFFFFCFFFFCFFFFCFFFFC",
+        "properties": [0,0,0,0,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0],
+        "count": 1,
+        "rotations": [0, 90, 180, 270],
+        "shield": true,
+        "property_types": ["C", "F"]
+    },
+    {
+        "type": 15,
+        "values": "CFRFFCFRFFCFRRRCFFFFCCCCC",
+        "properties": [0,1,2,3,3,0,1,2,3,3,0,1,2,2,2,0,1,1,1,1,0,0,0,0,0],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F", "R", "F"]
+    },
+    {
+        "type": 16,
+        "values": "CFRFFCFRFFCFRRRCFFFFCCCCC",
+        "properties": [0,1,2,3,3,0,1,2,3,3,0,1,2,2,2,0,1,1,1,1,0,0,0,0,0],
+        "count": 2,
+        "rotations": [0, 90, 180, 270],
+        "shield": true,
+        "property_types": ["C", "F", "R", "F"]
+    },
+    {
+        "type": 17,
+        "values": "CFFFCCFFFCCCCCCCFFFCCFFFC",
+        "properties": [0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,2,2,2,0,0,2,2,2,0],
+        "count": 1,
+        "rotations": [0, 90],
+        "property_types": ["C", "F", "F"]
+    },
+    {
+        "type": 18,
+        "values": "CFFFCCFFFCCCCCCCFFFCCFFFC",
+        "properties": [0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,2,2,2,0,0,2,2,2,0],
+        "count": 2,
+        "rotations": [0, 90],
+        "shield": true,
+        "property_types": ["C", "F", "F"]
+    },
+    {
+        "type": 19,
+        "values": "CCCCCCCCCCCCCCCCCCCCCCCCC",
+        "properties": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "count": 1,
+        "rotations": [0],
+        "shield": true,
+        "property_types": ["C"]
+    },
+    {
+        "type": 20,
+        "values": "CFFFCCFFFCCCCCCCCCCCCCCCC",
+        "properties": [0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F"]
+    },
+    {
+        "type": 21,
+        "values": "CFFFCCFFFCCCCCCCCCCCCCCCC",
+        "properties": [0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "count": 3,
+        "rotations": [0, 90, 180, 270],
+        "shield": true,
+        "property_types": ["C", "F"]
+    },
+    {
+        "type": 22,
+        "values": "CFRFCCFRFCCCCCCCCCCCCCCCC",
+        "properties": [0,1,2,3,0,0,1,2,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "count": 1,
+        "rotations": [0, 90, 180, 270],
+        "property_types": ["C", "F", "R", "F"]
+    },
+    {
+        "type": 23,
+        "values": "CFRFCCFRFCCCCCCCCCCCCCCCC",
+        "properties": [0,1,2,3,0,0,1,2,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "count": 2,
+        "rotations": [0, 90, 180, 270],
+        "shield": true,
+        "property_types": ["C", "F", "F", "R"]
+    }
+]

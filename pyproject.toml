@@ -1,0 +1,23 @@
+[project]
+name = "rl_carcassone"
+version = "0.1"
+authors = [
+  {name = "Konstantin Cherniak", email = "chernyakonstantin@gmail.com"},
+]
+description = "Materials for a blog about mastering Carcassone game with RL."
+readme = "README.md"
+
+requires-python = ">= 3.12"
+dependencies = [
+  "networkx",
+  "opencv-python",
+  "numpy",
+  "click",
+  "gymnasium",
+  "scipy",
+  "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rl_carcassone"]
