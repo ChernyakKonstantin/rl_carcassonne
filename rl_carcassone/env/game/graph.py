@@ -95,6 +95,10 @@ class Graph:
             # fmt: off
             connector_to_test_node_name = self._get_connector_nodes_names(to_test_position_node_name)[connector_to_test]  # noqa: E501
             # fmt: on
+            property_to_test_node_name = self._get_attached_property_node_name(connector_to_test_node_name)
+            property_to_test_type = self._graph.nodes[property_to_test_node_name]["property"]
+            if property_to_test_type != property.type:
+                continue
             # NOTE: Because of `options` all adjacent cards are linkable.
             self._graph.add_edge(
                 position_connector_nodes_names[connector],
@@ -282,6 +286,9 @@ class Graph:
                     continue
                 connector_node_name = self._get_connector_nodes_names(to_test_position_node_name)[connector_to_test]
                 property_node_name = self._get_attached_property_node_name(connector_node_name)
+                property_type = self._graph.nodes[property_node_name]["property"]
+                if property_type != property.type:
+                    continue
                 property_owners = self.get_property_owners(
                     start_property_node_name=property_node_name,
                     real_only=True,
