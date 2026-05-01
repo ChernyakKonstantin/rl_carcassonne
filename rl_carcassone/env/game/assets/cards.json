@@ -451,7 +451,8 @@
                             "WS"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "90": {
                 "possible_neighbors": {
@@ -900,7 +901,8 @@
                             "WN"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "180": {
                 "possible_neighbors": {
@@ -1349,7 +1351,8 @@
                             "EN"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "270": {
                 "possible_neighbors": {
@@ -1798,7 +1801,8 @@
                             "ES"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -2254,7 +2258,8 @@
                             "E"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "90": {
                 "possible_neighbors": {
@@ -2703,7 +2708,8 @@
                             "ES"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -3168,7 +3174,8 @@
                             "ES"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "90": {
                 "possible_neighbors": {
@@ -3626,7 +3633,8 @@
                             "WS"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "180": {
                 "possible_neighbors": {
@@ -4084,7 +4092,8 @@
                             "WN"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "270": {
                 "possible_neighbors": {
@@ -4542,7 +4551,8 @@
                             "EN"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -5011,7 +5021,8 @@
                             "ES"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -5473,7 +5484,8 @@
                             "E"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -5934,7 +5946,8 @@
                             "E"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "90": {
                 "possible_neighbors": {
@@ -6388,7 +6401,8 @@
                             "S"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "180": {
                 "possible_neighbors": {
@@ -6842,7 +6856,8 @@
                             "W"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             },
             "270": {
                 "possible_neighbors": {
@@ -7296,7 +7311,8 @@
                             "N"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -7783,6 +7799,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -8263,6 +8285,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -8743,6 +8771,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -9223,6 +9257,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -9708,6 +9748,12 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -10186,6 +10232,12 @@
                             "WS"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -10664,6 +10716,12 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -11142,6 +11200,12 @@
                             "EN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -11627,6 +11691,12 @@
                             "EN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -12105,6 +12175,12 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -12583,6 +12659,12 @@
                             "WS"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -13061,6 +13143,12 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -13577,6 +13665,16 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        2,
+                        0
+                    ],
+                    [
+                        2,
+                        1
+                    ]
                 ]
             },
             "90": {
@@ -14086,6 +14184,16 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        2,
+                        0
+                    ],
+                    [
+                        2,
+                        1
+                    ]
                 ]
             },
             "180": {
@@ -14595,6 +14703,16 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        2,
+                        0
+                    ],
+                    [
+                        2,
+                        1
+                    ]
                 ]
             },
             "270": {
@@ -15104,6 +15222,16 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        2,
+                        0
+                    ],
+                    [
+                        2,
+                        1
+                    ]
                 ]
             }
         }
@@ -15620,6 +15748,16 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        1,
+                        2
+                    ]
                 ]
             },
             "90": {
@@ -16129,6 +16267,16 @@
                             "S"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        1,
+                        2
+                    ]
                 ]
             }
         }
@@ -16614,6 +16762,12 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -17092,6 +17246,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -17570,6 +17730,12 @@
                             "EN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -18048,6 +18214,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -18542,6 +18714,12 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -19029,6 +19207,12 @@
                             "WS"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -19516,6 +19700,12 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -20003,6 +20193,12 @@
                             "EN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -20514,6 +20710,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -21018,6 +21220,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -21522,6 +21730,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -22026,6 +22240,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -22537,6 +22757,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -23041,6 +23267,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -23545,6 +23777,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -24049,6 +24287,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -24558,6 +24802,12 @@
                             "EN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -25060,6 +25310,12 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -25562,6 +25818,12 @@
                             "WS"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -26064,6 +26326,12 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -26573,6 +26841,12 @@
                             "EN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -27075,6 +27349,12 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -27577,6 +27857,12 @@
                             "WS"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -28079,6 +28365,12 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -28595,6 +28887,16 @@
                             "S"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -29104,6 +29406,16 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        0
+                    ]
                 ]
             }
         }
@@ -29620,6 +29932,16 @@
                             "S"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -30129,6 +30451,16 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        0
+                    ]
                 ]
             }
         }
@@ -30683,7 +31015,8 @@
                             "E"
                         ]
                     }
-                ]
+                ],
+                "field_city_adjacencies": []
             }
         }
     },
@@ -31218,6 +31551,12 @@
                             "N"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -31746,6 +32085,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -32274,6 +32619,12 @@
                             "S"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -32802,6 +33153,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -33337,6 +33694,12 @@
                             "N"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -33865,6 +34228,12 @@
                             "E"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -34393,6 +34762,12 @@
                             "S"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -34921,6 +35296,12 @@
                             "W"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ]
                 ]
             }
         }
@@ -35460,6 +35841,16 @@
                             "NE"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -35992,6 +36383,16 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -36524,6 +36925,16 @@
                             "SW"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -37056,6 +37467,16 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             }
         }
@@ -37595,6 +38016,16 @@
                             "NE"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             },
             "90": {
@@ -38127,6 +38558,16 @@
                             "ES"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             },
             "180": {
@@ -38659,6 +39100,16 @@
                             "SW"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             },
             "270": {
@@ -39191,6 +39642,16 @@
                             "WN"
                         ]
                     }
+                ],
+                "field_city_adjacencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        3,
+                        0
+                    ]
                 ]
             }
         }

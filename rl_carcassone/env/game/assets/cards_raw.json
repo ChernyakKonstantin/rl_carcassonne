@@ -53,7 +53,8 @@
         "properties": [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         "count": 5,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F"]
+        "property_types": ["C", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 7,
@@ -61,7 +62,8 @@
         "properties": [0,1,1,1,1,0,1,1,1,1,0,1,2,2,2,0,1,2,3,3,0,1,2,3,3],
         "count": 3,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 8,
@@ -69,7 +71,8 @@
         "properties": [0,1,2,3,3,0,1,2,3,3,0,1,2,2,2,0,1,1,1,1,0,1,1,1,1],
         "count": 3,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 9,
@@ -77,7 +80,8 @@
         "properties": [null,0,0,0,0,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2],
         "count": 2,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "C", "F"]
+        "property_types": ["C", "C", "F"],
+        "field_city_adjacencies": [[2, 0], [2, 1]]
     },
     {
         "type": 10,
@@ -85,7 +89,8 @@
         "properties": [0,1,1,1,2,0,1,1,1,2,0,1,1,1,2,0,1,1,1,2,0,1,1,1,2],
         "count": 3,
         "rotations": [0, 90],
-        "property_types": ["C", "F", "C"]
+        "property_types": ["C", "F", "C"],
+        "field_city_adjacencies": [[1, 0], [1, 2]]
     },
     {
         "type": 11,
@@ -93,7 +98,8 @@
         "properties": [0,0,0,0,0,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3],
         "count": 4,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 12,
@@ -101,7 +107,8 @@
         "properties": [0,0,0,0,0,1,1,1,1,1,2,2,null,3,3,4,4,5,6,6,4,4,5,6,6],
         "count": 3,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F", "R", "R", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "R", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 13,
@@ -109,7 +116,8 @@
         "properties": [0,0,0,0,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0],
         "count": 3,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F"]
+        "property_types": ["C", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 14,
@@ -118,7 +126,8 @@
         "count": 1,
         "rotations": [0, 90, 180, 270],
         "shield": true,
-        "property_types": ["C", "F"]
+        "property_types": ["C", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 15,
@@ -126,7 +135,8 @@
         "properties": [0,1,2,3,3,0,1,2,3,3,0,1,2,2,2,0,1,1,1,1,0,0,0,0,0],
         "count": 3,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 16,
@@ -135,7 +145,8 @@
         "count": 2,
         "rotations": [0, 90, 180, 270],
         "shield": true,
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 17,
@@ -143,7 +154,8 @@
         "properties": [0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,2,2,2,0,0,2,2,2,0],
         "count": 1,
         "rotations": [0, 90],
-        "property_types": ["C", "F", "F"]
+        "property_types": ["C", "F", "F"],
+        "field_city_adjacencies": [[1, 0], [2,0]]
     },
     {
         "type": 18,
@@ -152,7 +164,8 @@
         "count": 2,
         "rotations": [0, 90],
         "shield": true,
-        "property_types": ["C", "F", "F"]
+        "property_types": ["C", "F", "F"],
+        "field_city_adjacencies": [[1, 0], [2,0]]
     },
     {
         "type": 19,
@@ -169,7 +182,8 @@
         "properties": [0,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         "count": 3,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F"]
+        "property_types": ["C", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 21,
@@ -178,7 +192,8 @@
         "count": 3,
         "rotations": [0, 90, 180, 270],
         "shield": true,
-        "property_types": ["C", "F"]
+        "property_types": ["C", "F"],
+        "field_city_adjacencies": [[1, 0]]
     },
     {
         "type": 22,
@@ -186,7 +201,8 @@
         "properties": [0,1,2,3,0,0,1,2,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         "count": 1,
         "rotations": [0, 90, 180, 270],
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0], [3,0]]
     },
     {
         "type": 23,
@@ -195,6 +211,7 @@
         "count": 2,
         "rotations": [0, 90, 180, 270],
         "shield": true,
-        "property_types": ["C", "F", "R", "F"]
+        "property_types": ["C", "F", "R", "F"],
+        "field_city_adjacencies": [[1, 0], [3,0]]
     }
 ]

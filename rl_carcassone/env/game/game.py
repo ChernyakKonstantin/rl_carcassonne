@@ -11,7 +11,6 @@ from .player import BasePlayer
 from .utils import PixelMeaning
 
 
-# TODO: Add calculations for fields on the game end!
 class Game:
     PLAYER_ID: int = 0  # NOTE: Main player (i.e. agent or user).
 

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set, Tuple, Union
 
 from typing_extensions import Self
 
@@ -32,6 +32,7 @@ class CardOption:
     values: str
     properties: List[int]
     properties_metas: List[PropertyMeta]
+    field_city_adjacencies: List[Tuple[int, int]]
     shield: bool  # TODO: This attribute must be in city property.
 
 
@@ -59,6 +60,7 @@ class Card:
                 properties=option["properties"],
                 shield=self.shield,
                 properties_metas=[PropertyMeta.from_dict(e) for e in option["properties_metas"]],
+                field_city_adjacencies=[tuple(e) for e in option.get("field_city_adjacencies", [])],
             )
         return converted_options
 

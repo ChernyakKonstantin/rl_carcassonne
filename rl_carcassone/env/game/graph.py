@@ -19,6 +19,8 @@ class PropertyComponent:
 
 
 class Graph:
+    FIELD_CITY_BORDER = "field_city_border"
+
     def __init__(self):
         self._graph = None
         self._n_calls = None
@@ -158,6 +160,20 @@ class Graph:
                 path_for=property.type,
             )
 
+    def _link_internal_field_city_adjacencies(
+        self,
+        card: CardOption,
+        property_node_names_by_index: Dict[int, Hashable],
+    ):
+        for field_property_index, city_property_index in card.field_city_adjacencies:
+            field_node_name = property_node_names_by_index[field_property_index]
+            city_node_name = property_node_names_by_index[city_property_index]
+            self._graph.add_edge(
+                field_node_name,
+                city_node_name,
+                relation=self.FIELD_CITY_BORDER,
+            )
+
     def _update_neighbors_possible_values(
         self,
         position: Tuple[int, int],
@@ -281,6 +297,7 @@ class Graph:
 
         # NOTE: ----- Handle properties. -----
         position_connector_nodes_names = self._get_position_connector_nodes_names(position_node_name)
+        property_node_names_by_index = dict()
         for property_index, property in enumerate(card.properties_metas):
             property_node_name = self._property_node_name(card_position, property_index)
             if meeple_position == property_index:
@@ -326,8 +343,10 @@ class Graph:
                     position_connector_nodes_names=position_connector_nodes_names,
                     property=property,
                 )
+                property_node_names_by_index[property_index] = property_node_name
             else:
                 raise TypeError(f"Unknown {property.type}")
+        self._link_internal_field_city_adjacencies(card, property_node_names_by_index)
         # NOTE: ----- Complete handling properties. -----
 
     def get_possible_card_positions(self, card_type: int, orientation: Orientation) -> List[Tuple[int, int]]:
@@ -421,7 +440,7 @@ class Graph:
         self._graph.nodes[property_node_name]["ignore"] = True
 
     def ignore_property_component(self, component: PropertyComponent):
-        if component.type in {PixelMeaning.ROAD, PixelMeaning.CITY}:
+        if component.type in {PixelMeaning.ROAD, PixelMeaning.CITY, PixelMeaning.FIELD}:
             for node_name in component.node_names:
                 if "ignore" in self._graph.nodes[node_name]:
                     self._graph.nodes[node_name]["ignore"] = True
@@ -479,3 +498,18 @@ class Graph:
         if is_complete:
             scores *= 2
         return scores
+
+    def get_scores_for_field_component(self, component: PropertyComponent) -> int:
+        completed_city_components = set()
+        for field_node_name in component.property_node_names:
+            for neighbor_node_name in self._graph.neighbors(field_node_name):
+                edge_data = self._graph.get_edge_data(field_node_name, neighbor_node_name)
+                if edge_data.get("relation") != self.FIELD_CITY_BORDER:
+                    continue
+                if self._graph.nodes[neighbor_node_name].get("property") != PixelMeaning.CITY:
+                    raise ValueError(f"Field border points to non-city node: {neighbor_node_name}")
+                city_node_names = self._traverse_property(neighbor_node_name)
+                city_component = self._build_property_component(neighbor_node_name, city_node_names)
+                if self.is_growing_property_component_complete(city_component):
+                    completed_city_components.add(frozenset(city_component.property_node_names))
+        return 3 * len(completed_city_components)

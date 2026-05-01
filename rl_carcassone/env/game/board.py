@@ -76,6 +76,13 @@ class Board:
             self._apply_majority_outcome(step_results, owners, n_scores)
             self._graph.ignore_property_component(component)
 
+    def _get_field_outcomes(self, step_results: Dict[int, StepResult]):
+        for component in self._graph.iter_property_components(PixelMeaning.FIELD):
+            n_scores = self._graph.get_scores_for_field_component(component)
+            owners = component.owners
+            self._apply_majority_outcome(step_results, owners, n_scores)
+            self._graph.ignore_property_component(component)
+
     def reset(self, card: Card):
         """This method clears all graphs and puts initial card."""
         self._graph.reset()
@@ -87,6 +94,8 @@ class Board:
         self._get_abbot_outcomes(step_results, complete_property_only)
         self._get_road_outcomes(step_results, complete_property_only)
         self._get_city_outcomes(step_results, complete_property_only)
+        if consider_fields:
+            self._get_field_outcomes(step_results)
         return step_results
 
     def put_card_and_meeple(self, card: Card, action: Action, player_id: int) -> Dict[int, StepResult]:
