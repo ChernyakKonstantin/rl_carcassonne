@@ -1,6 +1,5 @@
 from types import NoneType
-from typing import Any, Dict, List, Set, Tuple, Union
-from uuid import uuid4
+from typing import Any, Dict, Hashable, List, Set, Tuple, Union
 
 import networkx as nx
 
@@ -13,10 +12,25 @@ class Graph:
         self._graph = None
         self._n_calls = None
 
+    @staticmethod
+    def _position_node_name(position: Tuple[int, int]) -> Tuple[str, int, int]:
+        y, x = position
+        return ("position", y, x)
+
+    @staticmethod
+    def _connector_node_name(position: Tuple[int, int], connector: ConnectorType) -> Tuple[str, int, int, ConnectorType]:
+        y, x = position
+        return ("connector", y, x, connector)
+
+    @staticmethod
+    def _property_node_name(position: Tuple[int, int], property_index: int) -> Tuple[str, int, int, int]:
+        y, x = position
+        return ("property", y, x, property_index)
+
     def _find_empty_nodes(self) -> List[Dict[str, Any]]:
         return [self._graph.nodes[n] for n, d in self._graph.nodes(data=True) if d.get("empty", None)]
 
-    def _find_nodes_name_by_attribute_value(self, attribute_name: str, attribute_value: Any) -> List[str]:
+    def _find_nodes_name_by_attribute_value(self, attribute_name: str, attribute_value: Any) -> List[Hashable]:
         """Find the first node that satisfy the criterion."""
         found = []
         for node_name, node_data in self._graph.nodes(data=True):
@@ -25,25 +39,18 @@ class Graph:
                     found.append(node_name)
         return found
 
-    def _find_position_node_name(self, position: Tuple[int, int]) -> Union[str, NoneType]:
-        found = self._find_nodes_name_by_attribute_value("position", position)
-        if len(found) == 0:
+    def _find_position_node_name(self, position: Tuple[int, int]) -> Union[Hashable, NoneType]:
+        node_name = self._position_node_name(position)
+        if node_name not in self._graph:
             return None
-        elif len(found) == 1:
-            return found[0]
-        else:
-            raise ValueError(f"Each position can be occupied by a single card, found {len(found)}")
+        return node_name
 
-    def _get_connector_nodes_names(self, position_node_name) -> Dict[ConnectorType, str]:
-        result = dict()
-        for n in self._graph.neighbors(position_node_name):
-            if "connector" in self._graph.nodes[n]:
-                connector = self._graph.nodes[n]["connector"]
-                result[connector] = n
-        return result
+    def _get_connector_nodes_names(self, position_node_name: Hashable) -> Dict[ConnectorType, Hashable]:
+        position = self._graph.nodes[position_node_name]["position"]
+        return {connector: self._connector_node_name(position, connector) for connector in ConnectorType}
 
     def _add_empty_node(self, position: Tuple[int, int]):
-        position_node_name = uuid4().hex
+        position_node_name = self._position_node_name(position)
         self._graph.add_node(
             position_node_name,
             position=position,
@@ -52,7 +59,7 @@ class Graph:
             possible_values=None,
         )
         for connector in ConnectorType:
-            connector_node_name = uuid4().hex
+            connector_node_name = self._connector_node_name(position, connector)
             self._graph.add_node(connector_node_name, connector=connector)
             self._graph.add_edge(
                 position_node_name,
@@ -73,7 +80,7 @@ class Graph:
     def _try_to_link_property(
         self,
         property_position: Tuple[int, int],
-        position_connector_nodes_names: Dict[ConnectorType, str],
+        position_connector_nodes_names: Dict[ConnectorType, Hashable],
         property: PropertyMeta,
     ):
         for connector in property.connectors:
@@ -132,14 +139,14 @@ class Graph:
                 possible_values_type = type(self._graph.nodes[position_node_name]["possible_values"])
                 raise TypeError(f"Unexpected type of `possible_values`: {possible_values_type} at side {side_name}")
 
-    def _get_attached_property_node_name(self, connector_node_name: str) -> str:
+    def _get_attached_property_node_name(self, connector_node_name: Hashable) -> Hashable:
         neighbors = [n for n in self._graph.neighbors(connector_node_name) if "property" in self._graph.nodes[n]]
         if len(neighbors) != 1:
             # NOTE: A connector is attached to a single property.
             raise RuntimeError(f"Node has {len(neighbors)} neighbors instead of 1 at node {connector_node_name}")
         return neighbors[0]
 
-    def _traverse_property(self, start_property_node_name) -> Set[str]:
+    def _traverse_property(self, start_property_node_name: Hashable) -> Set[Hashable]:
         property_type = self._graph.nodes[start_property_node_name]["property"]
         visited = set()
         queue = [start_property_node_name]
@@ -154,7 +161,7 @@ class Graph:
                     queue.append(neighbor)
         return visited
 
-    def get_property_owners(self, start_property_node_name: str, real_only: bool) -> List[int]:
+    def get_property_owners(self, start_property_node_name: Hashable, real_only: bool) -> List[int]:
         property_type = self._graph.nodes[start_property_node_name]["property"]
         if property_type == PixelMeaning.ABBOT:
             return [self._graph.nodes[start_property_node_name]["owner"]]
@@ -203,7 +210,7 @@ class Graph:
         # NOTE: ----- Handle properties. -----
         connector_nodes_names = self._get_connector_nodes_names(position_node_name)
         for property_index, property in enumerate(card.properties_metas):
-            property_node_name = uuid4().hex
+            property_node_name = self._property_node_name(card_position, property_index)
             if meeple_position == property_index:
                 owner = player_id
             else:
@@ -311,7 +318,7 @@ class Graph:
                 view[node_data["position"]] = node_data["view"]
         return view
 
-    def find_owned_abbot_nodes_names(self) -> List[str]:
+    def find_owned_abbot_nodes_names(self) -> List[Hashable]:
         abbot_nodes_names = self._find_nodes_name_by_attribute_value(
             attribute_name="property",
             attribute_value=PixelMeaning.ABBOT,
@@ -319,7 +326,7 @@ class Graph:
         non_ignored = [name for name in abbot_nodes_names if not self._graph.nodes[name]["ignore"]]
         return [name for name in non_ignored if self._graph.nodes[name]["owner"] is not None]
 
-    def find_owned_road_nodes_names(self) -> List[str]:
+    def find_owned_road_nodes_names(self) -> List[Hashable]:
         road_nodes_names = self._find_nodes_name_by_attribute_value(
             attribute_name="property",
             attribute_value=PixelMeaning.ROAD,
@@ -333,7 +340,7 @@ class Graph:
             non_ignored = non_ignored - visited
         return owned_road_nodes_names
 
-    def find_owned_city_nodes_names(self) -> List[str]:
+    def find_owned_city_nodes_names(self) -> List[Hashable]:
         city_nodes_names = self._find_nodes_name_by_attribute_value(
             attribute_name="property",
             attribute_value=PixelMeaning.CITY,
@@ -347,7 +354,7 @@ class Graph:
             non_ignored = non_ignored - visited
         return owned_city_nodes_names
 
-    def ignore(self, property_node_name: str):
+    def ignore(self, property_node_name: Hashable):
         node_type = self._graph.nodes[property_node_name]["property"]
         if node_type == PixelMeaning.ABBOT:
             self._graph.nodes[property_node_name]["ignore"] = True
@@ -358,7 +365,7 @@ class Graph:
         else:
             raise TypeError(f"Unexpected {node_type}")
 
-    def _is_abbot_complete(self, abbot_node_name: str) -> bool:
+    def _is_abbot_complete(self, abbot_node_name: Hashable) -> bool:
         neighbors = list(self._graph.neighbors(abbot_node_name))
         if len(neighbors) != 1:
             raise RuntimeError(f"Abbot has {len(neighbors)} neighbors instead of 1")
@@ -384,7 +391,7 @@ class Graph:
                 break
         return complete
 
-    def _is_road_complete(self, road_node_name: str) -> bool:
+    def _is_road_complete(self, road_node_name: Hashable) -> bool:
         visited = self._traverse_property(road_node_name)
         connector_nodes_names = []
         for node_name in visited:
@@ -405,7 +412,7 @@ class Graph:
                 return False
         return True
 
-    def _is_city_complete(self, city_node_name: str) -> bool:
+    def _is_city_complete(self, city_node_name: Hashable) -> bool:
         visited = self._traverse_property(city_node_name)
         connector_nodes_names = []
         for node_name in visited:
@@ -426,7 +433,7 @@ class Graph:
                 return False
         return True
 
-    def is_property_complete(self, property_node_name: str) -> bool:
+    def is_property_complete(self, property_node_name: Hashable) -> bool:
         node_type = self._graph.nodes[property_node_name]["property"]
         if node_type == PixelMeaning.ABBOT:
             return self._is_abbot_complete(property_node_name)
@@ -437,14 +444,14 @@ class Graph:
         else:
             raise TypeError(f"Unexpected {node_type}")
 
-    def get_scores_for_abbot(self, abbot_node_name: str) -> int:
+    def get_scores_for_abbot(self, abbot_node_name: Hashable) -> int:
         result = []
         for n in self._graph.neighbors(abbot_node_name):
             if "position" in self._graph.nodes[n] and not self._graph.nodes[n]["empty"]:
                 result.append(n)
         return len(result) + 1
 
-    def get_scores_for_city(self, city_node_name: str, is_complete: bool) -> int:
+    def get_scores_for_city(self, city_node_name: Hashable, is_complete: bool) -> int:
         visited = self._traverse_property(city_node_name)
         scores = 0
         for node_name in visited:
