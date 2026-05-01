@@ -15608,14 +15608,14 @@
                         ]
                     },
                     {
-                        "type": "C",
+                        "type": "F",
                         "connectors": [
                             "N",
                             "S"
                         ]
                     },
                     {
-                        "type": "F",
+                        "type": "C",
                         "connectors": [
                             "E"
                         ]
@@ -16117,14 +16117,14 @@
                         ]
                     },
                     {
-                        "type": "C",
+                        "type": "F",
                         "connectors": [
                             "W",
                             "E"
                         ]
                     },
                     {
-                        "type": "F",
+                        "type": "C",
                         "connectors": [
                             "S"
                         ]
@@ -37584,13 +37584,13 @@
                         ]
                     },
                     {
-                        "type": "F",
+                        "type": "R",
                         "connectors": [
                             "N"
                         ]
                     },
                     {
-                        "type": "R",
+                        "type": "F",
                         "connectors": [
                             "NE"
                         ]
@@ -38116,13 +38116,13 @@
                         ]
                     },
                     {
-                        "type": "F",
+                        "type": "R",
                         "connectors": [
                             "E"
                         ]
                     },
                     {
-                        "type": "R",
+                        "type": "F",
                         "connectors": [
                             "ES"
                         ]
@@ -38648,13 +38648,13 @@
                         ]
                     },
                     {
-                        "type": "F",
+                        "type": "R",
                         "connectors": [
                             "S"
                         ]
                     },
                     {
-                        "type": "R",
+                        "type": "F",
                         "connectors": [
                             "SW"
                         ]
@@ -39180,13 +39180,13 @@
                         ]
                     },
                     {
-                        "type": "F",
+                        "type": "R",
                         "connectors": [
                             "W"
                         ]
                     },
                     {
-                        "type": "R",
+                        "type": "F",
                         "connectors": [
                             "WN"
                         ]

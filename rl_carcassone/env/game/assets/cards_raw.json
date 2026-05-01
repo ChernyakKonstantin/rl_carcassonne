@@ -85,7 +85,7 @@
         "properties": [0,1,1,1,2,0,1,1,1,2,0,1,1,1,2,0,1,1,1,2,0,1,1,1,2],
         "count": 3,
         "rotations": [0, 90],
-        "property_types": ["C", "C", "F"]
+        "property_types": ["C", "F", "C"]
     },
     {
         "type": 11,
@@ -195,6 +195,6 @@
         "count": 2,
         "rotations": [0, 90, 180, 270],
         "shield": true,
-        "property_types": ["C", "F", "F", "R"]
+        "property_types": ["C", "F", "R", "F"]
     }
 ]
