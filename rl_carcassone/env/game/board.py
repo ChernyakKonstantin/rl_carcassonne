@@ -1,14 +1,12 @@
-from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List
 
-import networkx as nx
 import numpy as np
 
-from .card import Card, CardOption
+from .card import Card
 from .graph import Graph
-from .utils import Action, ConnectorType, Orientation, PixelMeaning
+from .utils import Action, Orientation, PixelMeaning
 
 
 @dataclass
@@ -21,6 +19,63 @@ class Board:
     def __init__(self):
         self._graph = Graph()
 
+    def _apply_majority_outcome(
+        self,
+        step_results: Dict[int, StepResult],
+        owners: List[int],
+        n_scores: int,
+    ):
+        """In-place filling of `step_results` using Carcassonne majority rule."""
+        real_owners = list(filter(lambda x: x is not None, owners))
+        if len(real_owners) == 0:
+            return
+        owner_ids, meeples_per_owner = np.unique(real_owners, return_counts=True)
+        max_meeples = meeples_per_owner.max()
+        for owner_id, n_meeples in zip(owner_ids, meeples_per_owner):
+            n_meeples = int(n_meeples)
+            if n_meeples == max_meeples:
+                step_results[owner_id].score += n_scores
+            step_results[owner_id].returned_meeples += n_meeples
+
+    def _get_abbot_outcomes(self, step_results: Dict[int, StepResult], complete_property_only: bool):
+        """In-place filling of `step_results`."""
+        for node_name in self._graph.find_owned_abbot_nodes_names():
+            to_process = True
+            if complete_property_only:
+                to_process = self._graph.is_abbot_complete(node_name)
+            if not to_process:
+                continue
+            owner_id = self._graph.get_property_owners(node_name, real_only=True)[0]  # NOTE: Abbot has a single owner.
+            n_scores = self._graph.get_scores_for_abbot(node_name)
+            if complete_property_only and n_scores != 9:
+                raise ValueError(f"Complete abbot must have 9 scores, while {n_scores} are obtained")
+            step_results[owner_id].score += n_scores
+            step_results[owner_id].returned_meeples += 1
+            self._graph.ignore_abbot(node_name)
+
+    def _get_road_outcomes(self, step_results: Dict[int, StepResult], complete_property_only: bool):
+        """In-place filling of `step_results`."""
+        for component in self._graph.iter_property_components(PixelMeaning.ROAD):
+            to_process = True
+            if complete_property_only:
+                to_process = self._graph.is_growing_property_component_complete(component)
+            if not to_process:
+                continue
+            n_scores = self._graph.get_scores_for_road_component(component)
+            owners = component.owners
+            self._apply_majority_outcome(step_results, owners, n_scores)
+            self._graph.ignore_property_component(component)
+
+    def _get_city_outcomes(self, step_results: Dict[int, StepResult], complete_property_only: bool):
+        for component in self._graph.iter_property_components(PixelMeaning.CITY):
+            is_property_complete = self._graph.is_growing_property_component_complete(component)
+            if complete_property_only and not is_property_complete:
+                continue
+            n_scores = self._graph.get_scores_for_city_component(component, is_property_complete)
+            owners = component.owners
+            self._apply_majority_outcome(step_results, owners, n_scores)
+            self._graph.ignore_property_component(component)
+
     def reset(self, card: Card):
         """This method clears all graphs and puts initial card."""
         self._graph.reset()
@@ -29,66 +84,9 @@ class Board:
 
     def get_outcomes(self, complete_property_only: bool, consider_fields: bool) -> Dict[int, StepResult]:
         step_results = defaultdict(StepResult)
-
-        for node_name in self._graph.find_owned_abbot_nodes_names():
-            if complete_property_only:
-                to_process = self._graph.is_property_complete(node_name)
-            else:
-                to_process = True
-            if to_process:
-                owner_id = self._graph.get_property_owners(node_name, real_only=True)[0]  # NOTE: Abbot has a single owner.
-                n_scores = self._graph.get_scores_for_abbot(node_name)
-                if complete_property_only and n_scores != 9:
-                    raise ValueError(f"Complete abbot must have 9 scores, while {n_scores} are obtained")
-                step_results[owner_id].score += n_scores
-                step_results[owner_id].returned_meeples += 1
-                self._graph.ignore(node_name)
-
-        for node_name in self._graph.find_road_component_representatives():
-            if complete_property_only:
-                to_process = self._graph.is_property_complete(node_name)
-            else:
-                to_process = True
-            if to_process:
-                owners = self._graph.get_property_owners(node_name, real_only=False)
-                n_scores = len(owners)
-                real_owners = list(filter(lambda x: x is not None, owners))
-                if len(real_owners) > 0:
-                    owner_ids, meeples_per_owner = np.unique(real_owners, return_counts=True)
-                    max_meeples = meeples_per_owner.max()
-                    for owner_id, n_meeples in zip(owner_ids, meeples_per_owner):
-                        n_meeples = int(n_meeples)
-                        if n_meeples == max_meeples:
-                            step_results[owner_id].score += n_scores
-                            step_results[owner_id].returned_meeples += n_meeples
-                        else:
-                            step_results[owner_id].score += 0
-                            step_results[owner_id].returned_meeples += n_meeples
-                self._graph.ignore(node_name)
-
-        for node_name in self._graph.find_city_component_representatives():
-            is_property_complete = self._graph.is_property_complete(node_name)
-            if complete_property_only:
-                to_process = is_property_complete
-            else:
-                to_process = True
-            if to_process:
-                owners = self._graph.get_property_owners(node_name, real_only=False)
-                n_scores = self._graph.get_scores_for_city(node_name, is_property_complete)
-                real_owners = list(filter(lambda x: x is not None, owners))
-                if len(real_owners) > 0:
-                    owner_ids, meeples_per_owner = np.unique(real_owners, return_counts=True)
-                    max_meeples = meeples_per_owner.max()
-                    for owner_id, n_meeples in zip(owner_ids, meeples_per_owner):
-                        n_meeples = int(n_meeples)
-                        if n_meeples == max_meeples:
-                            step_results[owner_id].score += n_scores
-                            step_results[owner_id].returned_meeples += n_meeples
-                        else:
-                            step_results[owner_id].score += 0
-                            step_results[owner_id].returned_meeples += n_meeples
-                self._graph.ignore(node_name)
-
+        self._get_abbot_outcomes(step_results, complete_property_only)
+        self._get_road_outcomes(step_results, complete_property_only)
+        self._get_city_outcomes(step_results, complete_property_only)
         return step_results
 
     def put_card_and_meeple(self, card: Card, action: Action, player_id: int) -> Dict[int, StepResult]:

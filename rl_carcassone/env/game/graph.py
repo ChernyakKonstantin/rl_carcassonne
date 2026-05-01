@@ -1,10 +1,21 @@
+from dataclasses import dataclass
 from types import NoneType
-from typing import Any, Dict, Hashable, List, Set, Tuple, Union
+from typing import Any, Dict, Hashable, Iterator, List, Set, Tuple, Union
 
 import networkx as nx
 
 from .card import CardOption, PossibleNeighbor, PropertyMeta
 from .utils import ConnectorType, Orientation, PixelMeaning
+
+
+@dataclass(frozen=True)
+class PropertyComponent:
+    type: PixelMeaning
+    representative_node_name: Hashable
+    node_names: Set[Hashable]
+    property_node_names: List[Hashable]
+    connector_node_names: List[Hashable]
+    owners: List[Union[NoneType, int]]
 
 
 class Graph:
@@ -18,7 +29,10 @@ class Graph:
         return ("position", y, x)
 
     @staticmethod
-    def _connector_node_name(position: Tuple[int, int], connector: ConnectorType) -> Tuple[str, int, int, ConnectorType]:
+    def _connector_node_name(
+        position: Tuple[int, int],
+        connector: ConnectorType,
+    ) -> Tuple[str, int, int, ConnectorType]:
         y, x = position
         return ("connector", y, x, connector)
 
@@ -26,6 +40,40 @@ class Graph:
     def _property_node_name(position: Tuple[int, int], property_index: int) -> Tuple[str, int, int, int]:
         y, x = position
         return ("property", y, x, property_index)
+
+    @staticmethod
+    def _get_neighbor_position(position: Tuple[int, int], connector: ConnectorType) -> Tuple[int, int]:
+        """Return the single cardinal neighbor reached by a connector on one side of a tile."""
+        if ConnectorType.is_north(connector):
+            return (position[0] - 1, position[1])
+        elif ConnectorType.is_south(connector):
+            return (position[0] + 1, position[1])
+        elif ConnectorType.is_east(connector):
+            return (position[0], position[1] + 1)
+        elif ConnectorType.is_west(connector):
+            return (position[0], position[1] - 1)
+        else:
+            raise ValueError(f"Unknown {connector=}")
+
+    @staticmethod
+    def _get_neighbor_card_positions(position: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """Return the four side-adjacent card positions; diagonals are not valid card neighbors."""
+        return [
+            (position[0] - 1, position[1]),
+            (position[0] + 1, position[1]),
+            (position[0], position[1] - 1),
+            (position[0], position[1] + 1),
+        ]
+
+    @staticmethod
+    def _get_surrounding_positions(position: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """Return all eight positions around a tile, including diagonals; used for abbot completion."""
+        return [
+            (position[0] + y_delta, position[1] + x_delta)
+            for y_delta in (-1, 0, 1)
+            for x_delta in (-1, 0, 1)
+            if y_delta != 0 or x_delta != 0
+        ]
 
     def _find_empty_nodes(self) -> List[Dict[str, Any]]:
         return [self._graph.nodes[n] for n, d in self._graph.nodes(data=True) if d.get("empty", None)]
@@ -68,14 +116,22 @@ class Graph:
             )
 
     def _try_add_empty_nodes_around(self, position: Tuple[int, int]):
-        at_north = (position[0] - 1, position[1])
-        at_south = (position[0] + 1, position[1])
-        at_west = (position[0], position[1] - 1)
-        at_east = (position[0], position[1] + 1)
-        for neighbor_position in (at_north, at_south, at_east, at_west):
+        for neighbor_position in self._get_neighbor_card_positions(position):
             neighbor_position_node_name = self._find_position_node_name(neighbor_position)
             if neighbor_position_node_name is None:
                 self._add_empty_node(neighbor_position)
+
+    def _find_neighbor_connector_node_name(
+        self,
+        property_position: Tuple[int, int],
+        connector: ConnectorType,
+    ) -> Union[Hashable, NoneType]:
+        neighbor_position = self._get_neighbor_position(property_position, connector)
+        neighbor_position_node_name = self._find_position_node_name(neighbor_position)
+        if neighbor_position_node_name is None or self._graph.nodes[neighbor_position_node_name]["empty"]:
+            return None
+        neighbor_connector = ConnectorType.inverse(connector)
+        return self._get_position_connector_nodes_names(neighbor_position_node_name)[neighbor_connector]
 
     def _try_to_link_property(
         self,
@@ -84,32 +140,21 @@ class Graph:
         property: PropertyMeta,
     ):
         for connector in property.connectors:
-            if ConnectorType.is_north(connector):
-                position_to_test = (property_position[0] - 1, property_position[1])
-            elif ConnectorType.is_south(connector):
-                position_to_test = (property_position[0] + 1, property_position[1])
-            elif ConnectorType.is_east(connector):
-                position_to_test = (property_position[0], property_position[1] + 1)
-            elif ConnectorType.is_west(connector):
-                position_to_test = (property_position[0], property_position[1] - 1)
-            else:
-                raise ValueError(f"Unknown {connector=}")
-            connector_to_test = ConnectorType.inverse(connector)
-            to_test_position_node_name = self._find_position_node_name(position_to_test)
-            if self._graph.nodes[to_test_position_node_name]["empty"]:
+            neighbor_connector_node_name = self._find_neighbor_connector_node_name(
+                property_position=property_position,
+                connector=connector,
+            )
+            if neighbor_connector_node_name is None:
                 # NOTE: There is no card at the neighbor position, so we cannot link property.
                 continue
-            # fmt: off
-            connector_to_test_node_name = self._get_position_connector_nodes_names(to_test_position_node_name)[connector_to_test]  # noqa: E501
-            # fmt: on
-            property_to_test_node_name = self._get_attached_property_node_name(connector_to_test_node_name)
-            property_to_test_type = self._graph.nodes[property_to_test_node_name]["property"]
-            if property_to_test_type != property.type:
-                continue
+            neighbor_property_node_name = self._get_attached_property_node_name(neighbor_connector_node_name)
+            neighbor_property_type = self._graph.nodes[neighbor_property_node_name]["property"]
+            if neighbor_property_type != property.type:
+                raise ValueError(f"Unexpected property type mismatch: {neighbor_property_type=} != {property.type=}")
             # NOTE: Because of `options` all adjacent cards are linkable.
             self._graph.add_edge(
                 position_connector_nodes_names[connector],
-                connector_to_test_node_name,
+                neighbor_connector_node_name,
                 path_for=property.type,
             )
 
@@ -119,17 +164,7 @@ class Graph:
         possible_neighbors_per_side: Dict[str, Set[PossibleNeighbor]],
     ):
         for side_name, possible_neighbors in possible_neighbors_per_side.items():
-            if side_name == ConnectorType.N:
-                neighbor_position = (position[0] - 1, position[1])
-            elif side_name == ConnectorType.S:
-                neighbor_position = (position[0] + 1, position[1])
-            elif side_name == ConnectorType.W:
-                neighbor_position = (position[0], position[1] - 1)
-            elif side_name == ConnectorType.E:
-                neighbor_position = (position[0], position[1] + 1)
-            else:
-                raise KeyError(f"Unknown side name: {side_name}")
-
+            neighbor_position = self._get_neighbor_position(position, side_name)
             position_node_name = self._find_position_node_name(neighbor_position)
             if self._graph.nodes[position_node_name]["possible_values"] is None:
                 self._graph.nodes[position_node_name]["possible_values"] = possible_neighbors
@@ -160,6 +195,43 @@ class Graph:
                 if "path_for" in data and data["path_for"] == property_type:
                     queue.append(neighbor)
         return visited
+
+    def _build_property_component(
+        self,
+        representative_node_name: Hashable,
+        node_names: Set[Hashable],
+    ) -> PropertyComponent:
+        property_type = self._graph.nodes[representative_node_name]["property"]
+        property_node_names = []
+        connector_node_names = []
+        owners = []
+        for node_name in node_names:
+            if "property" in self._graph.nodes[node_name]:
+                property_node_names.append(node_name)
+                owners.append(self._graph.nodes[node_name]["owner"])
+            elif "connector" in self._graph.nodes[node_name]:
+                connector_node_names.append(node_name)
+        return PropertyComponent(
+            type=property_type,
+            representative_node_name=representative_node_name,
+            node_names=node_names,
+            property_node_names=property_node_names,
+            connector_node_names=connector_node_names,
+            owners=owners,
+        )
+
+    def iter_property_components(self, property_type: PixelMeaning) -> Iterator[PropertyComponent]:
+        property_node_names = self._find_nodes_name_by_attribute_value(
+            attribute_name="property",
+            attribute_value=property_type,
+        )
+        non_ignored = set([name for name in property_node_names if not self._graph.nodes[name]["ignore"]])
+        while len(non_ignored) > 0:
+            representative_node_name = non_ignored.pop()
+            node_names = self._traverse_property(representative_node_name)
+            component = self._build_property_component(representative_node_name, node_names)
+            non_ignored = non_ignored - component.node_names
+            yield component
 
     def get_property_owners(self, start_property_node_name: Hashable, real_only: bool) -> List[int]:
         property_type = self._graph.nodes[start_property_node_name]["property"]
@@ -267,43 +339,62 @@ class Graph:
                 possible_positions.append(node["position"])
         return possible_positions
 
+    @staticmethod
+    def _is_abbot_property(property: PropertyMeta) -> bool:
+        return property.type == PixelMeaning.ABBOT
+
+    def _neighbor_property_has_owner(
+        self,
+        property_node_name: Hashable,
+        cache: Dict[Hashable, bool],
+    ) -> bool:
+        if property_node_name not in cache:
+            property_owners = self.get_property_owners(
+                start_property_node_name=property_node_name,
+                real_only=True,
+            )
+            cache[property_node_name] = len(property_owners) > 0
+        return cache[property_node_name]
+
+    def _neighbor_properties_allows_meeple(
+        self,
+        card_position: Tuple[int, int],
+        property: PropertyMeta,
+        owner_cache: Dict[Hashable, bool],
+    ) -> bool:
+        """
+        `owner_cache` stores whether an already placed neighboring property node reaches a real owner.
+
+        A candidate card can have separate properties that touch the same neighboring property node through different
+        connectors, e.g. a FIELD/ROAD/FIELD side facing a neighboring tile where both field edge segments belong to
+        one field. Caching avoids repeated traversals in `get_property_owners`.
+        """
+        for connector in property.connectors:
+            position_to_test = self._get_neighbor_position(card_position, connector)
+            connector_to_test = ConnectorType.inverse(connector)
+            to_test_position_node_name = self._find_position_node_name(position_to_test)
+            if to_test_position_node_name is None or self._graph.nodes[to_test_position_node_name]["empty"]:
+                # NOTE: There is no card at the neighbor position, so we cannot check.
+                continue
+            # fmt: off
+            connector_node_name = self._get_position_connector_nodes_names(to_test_position_node_name)[connector_to_test]
+            # fmt: on
+            property_node_name = self._get_attached_property_node_name(connector_node_name)
+            property_type = self._graph.nodes[property_node_name]["property"]
+            if property_type != property.type:
+                raise ValueError(f"Unexpected property type mismatch: {property_type=} != {property.type=}")
+            if self._neighbor_property_has_owner(property_node_name, owner_cache):
+                return False
+        return True
+
     def get_possible_meeple_positions(self, card_position: Tuple[int, int], card: CardOption) -> List[int]:
         possible_meeple_positions = []
+        # NOTE: Shared across candidate properties on this card; keys are neighboring property node names.
+        owner_cache = dict()
         for property_index, property in enumerate(card.properties_metas):
-            meeple_is_allowed = True
-            if property.type == PixelMeaning.ABBOT:
-                # NOTE: Abbot can be placed anywhere.
+            if self._is_abbot_property(property):
                 possible_meeple_positions.append(property_index)
-                continue
-            for connector in property.connectors:
-                if ConnectorType.is_north(connector):
-                    position_to_test = (card_position[0] - 1, card_position[1])
-                elif ConnectorType.is_south(connector):
-                    position_to_test = (card_position[0] + 1, card_position[1])
-                elif ConnectorType.is_east(connector):
-                    position_to_test = (card_position[0], card_position[1] + 1)
-                elif ConnectorType.is_west(connector):
-                    position_to_test = (card_position[0], card_position[1] - 1)
-                else:
-                    raise ValueError(f"Unknown {connector=}")
-                connector_to_test = ConnectorType.inverse(connector)
-                to_test_position_node_name = self._find_position_node_name(position_to_test)
-                if to_test_position_node_name is None or self._graph.nodes[to_test_position_node_name]["empty"]:
-                    # NOTE: There is no card at the neighbor position, so we cannot check.
-                    continue
-                connector_node_name = self._get_position_connector_nodes_names(to_test_position_node_name)[connector_to_test]
-                property_node_name = self._get_attached_property_node_name(connector_node_name)
-                property_type = self._graph.nodes[property_node_name]["property"]
-                if property_type != property.type:
-                    continue
-                property_owners = self.get_property_owners(
-                    start_property_node_name=property_node_name,
-                    real_only=True,
-                )
-                if len(property_owners) > 0:
-                    meeple_is_allowed = False
-                    break
-            if meeple_is_allowed:
+            elif self._neighbor_properties_allows_meeple(card_position, property, owner_cache):
                 possible_meeple_positions.append(property_index)
         return possible_meeple_positions
 
@@ -326,62 +417,24 @@ class Graph:
         non_ignored = [name for name in abbot_nodes_names if not self._graph.nodes[name]["ignore"]]
         return [name for name in non_ignored if self._graph.nodes[name]["owner"] is not None]
 
-    def find_road_component_representatives(self) -> List[Hashable]:
-        road_nodes_names = self._find_nodes_name_by_attribute_value(
-            attribute_name="property",
-            attribute_value=PixelMeaning.ROAD,
-        )
-        non_ignored = set([name for name in road_nodes_names if not self._graph.nodes[name]["ignore"]])
-        component_representatives = []
-        while len(non_ignored) > 0:
-            node_name = non_ignored.pop()
-            component_representatives.append(node_name)
-            visited = self._traverse_property(node_name)
-            non_ignored = non_ignored - visited
-        return component_representatives
+    def ignore_abbot(self, property_node_name: Hashable):
+        self._graph.nodes[property_node_name]["ignore"] = True
 
-    def find_city_component_representatives(self) -> List[Hashable]:
-        city_nodes_names = self._find_nodes_name_by_attribute_value(
-            attribute_name="property",
-            attribute_value=PixelMeaning.CITY,
-        )
-        non_ignored = set([name for name in city_nodes_names if not self._graph.nodes[name]["ignore"]])
-        component_representatives = []
-        while len(non_ignored) > 0:
-            node_name = non_ignored.pop()
-            component_representatives.append(node_name)
-            visited = self._traverse_property(node_name)
-            non_ignored = non_ignored - visited
-        return component_representatives
-
-    def ignore(self, property_node_name: Hashable):
-        node_type = self._graph.nodes[property_node_name]["property"]
-        if node_type == PixelMeaning.ABBOT:
-            self._graph.nodes[property_node_name]["ignore"] = True
-        elif node_type in {PixelMeaning.ROAD, PixelMeaning.CITY}:
-            for node_name in self._traverse_property(property_node_name):
+    def ignore_property_component(self, component: PropertyComponent):
+        if component.type in {PixelMeaning.ROAD, PixelMeaning.CITY}:
+            for node_name in component.node_names:
                 if "ignore" in self._graph.nodes[node_name]:
                     self._graph.nodes[node_name]["ignore"] = True
         else:
-            raise TypeError(f"Unexpected {node_type}")
+            raise TypeError(f"Unexpected {component.type}")
 
-    def _is_abbot_complete(self, abbot_node_name: Hashable) -> bool:
+    def is_abbot_complete(self, abbot_node_name: Hashable) -> bool:
         neighbors = list(self._graph.neighbors(abbot_node_name))
         if len(neighbors) != 1:
             raise RuntimeError(f"Abbot has {len(neighbors)} neighbors instead of 1")
         position = self._graph.nodes[neighbors[0]]["position"]
-        to_test_positions = [
-            (position[0] - 1, position[1] - 1),
-            (position[0] - 1, position[1]),
-            (position[0] - 1, position[1] + 1),
-            (position[0], position[1] - 1),
-            (position[0], position[1] + 1),
-            (position[0] + 1, position[1] - 1),
-            (position[0] + 1, position[1]),
-            (position[0] + 1, position[1] + 1),
-        ]
         complete = True
-        for to_test_position in to_test_positions:
+        for to_test_position in self._get_surrounding_positions(position):
             to_test_position_node_name = self._find_position_node_name(to_test_position)
             if to_test_position_node_name is None:
                 complete = False
@@ -391,58 +444,21 @@ class Graph:
                 break
         return complete
 
-    def _is_road_complete(self, road_node_name: Hashable) -> bool:
-        visited = self._traverse_property(road_node_name)
-        connector_nodes_names = []
-        for node_name in visited:
-            if "connector" in self._graph.nodes[node_name]:
-                connector_nodes_names.append(node_name)
-        if len(connector_nodes_names) == 0:
+    def is_growing_property_component_complete(self, component: PropertyComponent) -> bool:
+        if len(component.connector_node_names) == 0:
             raise RuntimeError("No connectors")
-        for node_name in connector_nodes_names:
-            paths_for_road = []
+        for node_name in component.connector_node_names:
+            paths_for_property = []
             for _, _, edge_data in self._graph.edges(node_name, data=True):
-                if "path_for" in edge_data and edge_data["path_for"] == PixelMeaning.ROAD:
-                    paths_for_road.append(edge_data)
-            if len(paths_for_road) > 2:
-                raise RuntimeError(f"Connector have {len(paths_for_road)} edges but expected less than 3")
-            elif len(paths_for_road) == 0:
-                raise ValueError("Connector has no edges with path_for=ROAD")
-            elif len(paths_for_road) < 2:
+                if "path_for" in edge_data and edge_data["path_for"] == component.type:
+                    paths_for_property.append(edge_data)
+            if len(paths_for_property) > 2:
+                raise RuntimeError(f"Connector have {len(paths_for_property)} edges but expected less than 3")
+            elif len(paths_for_property) == 0:
+                raise ValueError(f"Connector has no edges with path_for={component.type.name}")
+            elif len(paths_for_property) < 2:
                 return False
         return True
-
-    def _is_city_complete(self, city_node_name: Hashable) -> bool:
-        visited = self._traverse_property(city_node_name)
-        connector_nodes_names = []
-        for node_name in visited:
-            if "connector" in self._graph.nodes[node_name]:
-                connector_nodes_names.append(node_name)
-        if len(connector_nodes_names) == 0:
-            raise RuntimeError("No connectors")
-        for node_name in connector_nodes_names:
-            paths_for_city = []
-            for _, _, edge_data in self._graph.edges(node_name, data=True):
-                if "path_for" in edge_data and edge_data["path_for"] == PixelMeaning.CITY:
-                    paths_for_city.append(edge_data)
-            if len(paths_for_city) > 2:
-                raise RuntimeError(f"Connector have {len(paths_for_city)} edges but expected less than 3")
-            if len(paths_for_city) == 0:
-                raise ValueError("Connector has no edges with path_for=CITY")
-            elif len(paths_for_city) < 2:
-                return False
-        return True
-
-    def is_property_complete(self, property_node_name: Hashable) -> bool:
-        node_type = self._graph.nodes[property_node_name]["property"]
-        if node_type == PixelMeaning.ABBOT:
-            return self._is_abbot_complete(property_node_name)
-        elif node_type == PixelMeaning.ROAD:
-            return self._is_road_complete(property_node_name)
-        elif node_type == PixelMeaning.CITY:
-            return self._is_city_complete(property_node_name)
-        else:
-            raise TypeError(f"Unexpected {node_type}")
 
     def get_scores_for_abbot(self, abbot_node_name: Hashable) -> int:
         result = []
@@ -451,14 +467,15 @@ class Graph:
                 result.append(n)
         return len(result) + 1
 
-    def get_scores_for_city(self, city_node_name: Hashable, is_complete: bool) -> int:
-        visited = self._traverse_property(city_node_name)
+    def get_scores_for_road_component(self, component: PropertyComponent) -> int:
+        return len(component.owners)
+
+    def get_scores_for_city_component(self, component: PropertyComponent, is_complete: bool) -> int:
         scores = 0
-        for node_name in visited:
-            if "property" in self._graph.nodes[node_name]:
+        for node_name in component.property_node_names:
+            scores += 1
+            if self._graph.nodes[node_name]["shield"]:
                 scores += 1
-                if self._graph.nodes[node_name]["shield"]:
-                    scores += 1
         if is_complete:
             scores *= 2
         return scores
