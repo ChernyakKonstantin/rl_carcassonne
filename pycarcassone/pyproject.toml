@@ -1,0 +1,23 @@
+[project]
+name = "pycarcassone"
+version = "0.1"
+authors = [
+  {name = "Konstantin Cherniak", email = "chernyakonstantin@gmail.com"},
+]
+description = "Python implementation of Carcassone game with abbots DLC."
+readme = "README.md"
+
+requires-python = ">= 3.12"
+dependencies = [
+  "networkx",
+  "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pycarcassone"]
