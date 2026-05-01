@@ -45,7 +45,7 @@ class Graph:
             return None
         return node_name
 
-    def _get_connector_nodes_names(self, position_node_name: Hashable) -> Dict[ConnectorType, Hashable]:
+    def _get_position_connector_nodes_names(self, position_node_name: Hashable) -> Dict[ConnectorType, Hashable]:
         position = self._graph.nodes[position_node_name]["position"]
         return {connector: self._connector_node_name(position, connector) for connector in ConnectorType}
 
@@ -100,7 +100,7 @@ class Graph:
                 # NOTE: There is no card at the neighbor position, so we cannot link property.
                 continue
             # fmt: off
-            connector_to_test_node_name = self._get_connector_nodes_names(to_test_position_node_name)[connector_to_test]  # noqa: E501
+            connector_to_test_node_name = self._get_position_connector_nodes_names(to_test_position_node_name)[connector_to_test]  # noqa: E501
             # fmt: on
             property_to_test_node_name = self._get_attached_property_node_name(connector_to_test_node_name)
             property_to_test_type = self._graph.nodes[property_to_test_node_name]["property"]
@@ -208,7 +208,7 @@ class Graph:
         # NOTE: ----- Complete handling card data. -----
 
         # NOTE: ----- Handle properties. -----
-        connector_nodes_names = self._get_connector_nodes_names(position_node_name)
+        position_connector_nodes_names = self._get_position_connector_nodes_names(position_node_name)
         for property_index, property in enumerate(card.properties_metas):
             property_node_name = self._property_node_name(card_position, property_index)
             if meeple_position == property_index:
@@ -245,13 +245,13 @@ class Graph:
                 for connector in property.connectors:
                     self._graph.add_edge(
                         property_node_name,
-                        connector_nodes_names[connector],
+                        position_connector_nodes_names[connector],
                         path_for=property.type,
                     )
                 # NOTE: Try to link new property with neighbors.
                 self._try_to_link_property(
                     property_position=card_position,
-                    position_connector_nodes_names=connector_nodes_names,
+                    position_connector_nodes_names=position_connector_nodes_names,
                     property=property,
                 )
             else:
@@ -291,7 +291,7 @@ class Graph:
                 if to_test_position_node_name is None or self._graph.nodes[to_test_position_node_name]["empty"]:
                     # NOTE: There is no card at the neighbor position, so we cannot check.
                     continue
-                connector_node_name = self._get_connector_nodes_names(to_test_position_node_name)[connector_to_test]
+                connector_node_name = self._get_position_connector_nodes_names(to_test_position_node_name)[connector_to_test]
                 property_node_name = self._get_attached_property_node_name(connector_node_name)
                 property_type = self._graph.nodes[property_node_name]["property"]
                 if property_type != property.type:
@@ -326,33 +326,33 @@ class Graph:
         non_ignored = [name for name in abbot_nodes_names if not self._graph.nodes[name]["ignore"]]
         return [name for name in non_ignored if self._graph.nodes[name]["owner"] is not None]
 
-    def find_owned_road_nodes_names(self) -> List[Hashable]:
+    def find_road_component_representatives(self) -> List[Hashable]:
         road_nodes_names = self._find_nodes_name_by_attribute_value(
             attribute_name="property",
             attribute_value=PixelMeaning.ROAD,
         )
         non_ignored = set([name for name in road_nodes_names if not self._graph.nodes[name]["ignore"]])
-        owned_road_nodes_names = []
+        component_representatives = []
         while len(non_ignored) > 0:
             node_name = non_ignored.pop()
-            owned_road_nodes_names.append(node_name)
+            component_representatives.append(node_name)
             visited = self._traverse_property(node_name)
             non_ignored = non_ignored - visited
-        return owned_road_nodes_names
+        return component_representatives
 
-    def find_owned_city_nodes_names(self) -> List[Hashable]:
+    def find_city_component_representatives(self) -> List[Hashable]:
         city_nodes_names = self._find_nodes_name_by_attribute_value(
             attribute_name="property",
             attribute_value=PixelMeaning.CITY,
         )
         non_ignored = set([name for name in city_nodes_names if not self._graph.nodes[name]["ignore"]])
-        owned_city_nodes_names = []
+        component_representatives = []
         while len(non_ignored) > 0:
             node_name = non_ignored.pop()
-            owned_city_nodes_names.append(node_name)
+            component_representatives.append(node_name)
             visited = self._traverse_property(node_name)
             non_ignored = non_ignored - visited
-        return owned_city_nodes_names
+        return component_representatives
 
     def ignore(self, property_node_name: Hashable):
         node_type = self._graph.nodes[property_node_name]["property"]

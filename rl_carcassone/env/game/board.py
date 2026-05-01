@@ -44,7 +44,7 @@ class Board:
                 step_results[owner_id].returned_meeples += 1
                 self._graph.ignore(node_name)
 
-        for node_name in self._graph.find_owned_road_nodes_names():
+        for node_name in self._graph.find_road_component_representatives():
             if complete_property_only:
                 to_process = self._graph.is_property_complete(node_name)
             else:
@@ -66,7 +66,7 @@ class Board:
                             step_results[owner_id].returned_meeples += n_meeples
                 self._graph.ignore(node_name)
 
-        for node_name in self._graph.find_owned_city_nodes_names():
+        for node_name in self._graph.find_city_component_representatives():
             is_property_complete = self._graph.is_property_complete(node_name)
             if complete_property_only:
                 to_process = is_property_complete
