@@ -16,6 +16,10 @@ class Game:
     PLAYER_ID: int = 0  # NOTE: Main player (i.e. agent or user).
 
     def __init__(self, players: List[BasePlayer], seed: int = 42, enable_render: bool = False):
+        if len(players) < 2:
+            raise ValueError("At least 2 players are required.")
+        if len(players) > 5:
+            raise ValueError("Up to 5 players supported.")
         self.players = players
         self.id2player = {player.id: player for player in self.players}
         n_players = len(self.players)
