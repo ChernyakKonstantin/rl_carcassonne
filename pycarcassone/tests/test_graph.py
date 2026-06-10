@@ -1,7 +1,7 @@
-from pycarcassone.pycarcassone.card import PossibleNeighbor
-from pycarcassone.pycarcassone.deck import Deck
-from pycarcassone.pycarcassone.graph import Graph
-from pycarcassone.pycarcassone.utils import ConnectorType, Orientation, PixelMeaning
+from pycarcassone.card import PossibleNeighbor
+from pycarcassone.deck import Deck
+from pycarcassone.graph import Graph
+from pycarcassone.utils import ConnectorType, Orientation, PixelMeaning
 
 
 def _cards_by_type():

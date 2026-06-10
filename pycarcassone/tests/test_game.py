@@ -1,5 +1,5 @@
-from pycarcassone.pycarcassone.game import Game
-from pycarcassone.pycarcassone.player import RandomPlayer
+from pycarcassone.game import Game
+from pycarcassone.player import RandomPlayer
 
 
 def _deck_prefix(game: Game):

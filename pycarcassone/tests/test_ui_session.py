@@ -1,8 +1,8 @@
 import json
 
-from pycarcassone.pycarcassone.board import Board
-from pycarcassone.pycarcassone.deck import Deck
-from pycarcassone.pycarcassone.ui import HumanGameSession
+from pycarcassone.board import Board
+from pycarcassone.deck import Deck
+from pycarcassone.ui import HumanGameSession
 
 
 def _cards_by_type():

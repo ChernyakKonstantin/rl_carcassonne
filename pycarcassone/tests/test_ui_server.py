@@ -3,8 +3,8 @@ import threading
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
-from pycarcassone.pycarcassone.ui import HumanGameSession
-from pycarcassone.pycarcassone.ui.server import CarcassonneUiHandler
+from pycarcassone.ui import HumanGameSession
+from pycarcassone.ui.server import CarcassonneUiHandler
 
 
 def test_ui_server_serves_index_and_state():

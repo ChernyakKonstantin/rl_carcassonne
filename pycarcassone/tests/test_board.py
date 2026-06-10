@@ -1,6 +1,6 @@
-from pycarcassone.pycarcassone.board import Board
-from pycarcassone.pycarcassone.deck import Deck
-from pycarcassone.pycarcassone.utils import Action, Orientation
+from pycarcassone.board import Board
+from pycarcassone.deck import Deck
+from pycarcassone.utils import Action, Orientation
 
 
 def _cards_by_type():
