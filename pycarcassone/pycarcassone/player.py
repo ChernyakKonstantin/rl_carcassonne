@@ -1,6 +1,5 @@
 import random
 from typing import List
-from uuid import uuid4
 
 from .card import Card
 from .utils import Action
@@ -8,9 +7,13 @@ from .utils import Action
 
 class BasePlayer:
     def __init__(self):
-        self.id = uuid4().int
+        self.id = None
         self._max_meeples = 7
-        self.remaining_meeples = 7
+        self.remaining_meeples = self._max_meeples
+        self.scores = 0
+
+    def reset(self):
+        self.remaining_meeples = self._max_meeples
         self.scores = 0
 
     def select_action(self, current_board_state, current_card: Card, possible_actions: List[Action]) -> Action:
@@ -25,7 +28,13 @@ class BasePlayer:
 class RandomPlayer(BasePlayer):
     def __init__(self, seed: int):
         super().__init__()
-        self.rng = random.Random(seed)
+        self.seed = seed
+        self.rng = random.Random(self.seed)
+
+    def reset(self):
+        super().reset()
+        if hasattr(self, "rng"):
+            self.rng.seed(self.seed)
 
     def select_action(self, current_board_state, current_card: Card, possible_actions: List[Action]) -> Action:
         if self.remaining_meeples > 0:

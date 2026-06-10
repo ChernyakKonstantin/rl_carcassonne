@@ -19,21 +19,34 @@ class Game:
             raise ValueError("At least 2 players are required.")
         if len(players) > 5:
             raise ValueError("Up to 5 players supported.")
-        self.players = players
-        self.id2player = {player.id: player for player in self.players}
+        self.seed = seed
+        self._initial_players_order = list(players)
+        self._assign_player_ids()
+        self.players = list(self._initial_players_order)
+        self.id2player = {player.id: player for player in self._initial_players_order}
         n_players = len(self.players)
-        if n_players < 0:
+        if n_players < 2:
             raise ValueError("Minimum number of players is 2")
         elif n_players > 5:
             raise ValueError("Maximum number of players is 5")
         self.board = Board()
         self.deck = Deck(seed=seed)
-        self.rng = random.Random()
+        self.rng = random.Random(seed)
         self.enable_render = enable_render
 
-    def reset(self):
+    def _assign_player_ids(self):
+        for player_id, player in enumerate(self._initial_players_order):
+            player.id = player_id
+
+    def reset(self, seed: int = None):
         """Clear board, put initial card, randomize players order."""
-        self.deck.reset()
+        if seed is not None:
+            self.seed = seed
+        self.rng.seed(self.seed)
+        self.players = list(self._initial_players_order)
+        for player in self._initial_players_order:
+            player.reset()
+        self.deck.reset(seed=self.seed)
         first_card = self.deck.get_card()
         self.board.reset(first_card)
         # NOTE: Randomly select the order of players.
@@ -98,7 +111,7 @@ class Game:
         if action.meeple_position is not None:
             current_player.remaining_meeples -= 1
         self.board.put_card_and_meeple(card, action, current_player.id)
-        step_results = self.board.get_outcomes(complete_property_only=True, consider_fields=False)
+        step_results = self.board.resolve_outcomes(complete_property_only=True, consider_fields=False)
         for player_id, result in step_results.items():
             self.id2player[player_id].scores += result.score
             self.id2player[player_id].return_n_meeples(result.returned_meeples)
@@ -114,7 +127,7 @@ class Game:
         return True
 
     def _process_outcomes(self):
-        final_results = self.board.get_outcomes(complete_property_only=False, consider_fields=True)
+        final_results = self.board.resolve_outcomes(complete_property_only=False, consider_fields=True)
         for player_id, result in final_results.items():
             self.id2player[player_id].scores += result.score
             self.id2player[player_id].return_n_meeples(result.returned_meeples)

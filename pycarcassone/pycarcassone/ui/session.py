@@ -31,7 +31,6 @@ class HumanGameSession:
         self.players: List[BasePlayer] = [self.human]
         self.players.extend(RandomPlayer(seed + 1000 + i) for i in range(n_opponents))
         self.game = Game(list(self.players), seed=seed, enable_render=False)
-        self.game.rng.seed(seed)
         self.pending_turn: Optional[PendingTurn] = None
         self.terminal = False
         self.message = ""

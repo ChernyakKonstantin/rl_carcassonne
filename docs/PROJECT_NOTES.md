@@ -64,9 +64,14 @@ Then open `http://127.0.0.1:8765/`.
   current player, including the no-meeples case.
 - `Game.apply_player_action(current_player, card, action)` is the shared path for applying a tile,
   optional meeple, scoring completed non-field properties, and returning meeples.
+- `Game` assigns game-local dense player ids (`0..n-1`) in the order players are passed to the
+  constructor. `Game.PLAYER_ID == 0` is the main agent/human slot by convention.
+- `Game.reset(seed=None)` resets board, deck, player resources, player turn order, and player RNG
+  state. Passing a new seed changes deterministic deck/order generation.
 - `Graph.locate_card_and_meeple()` assumes the action is valid. Validation should happen before
   calling it.
-- `Board.get_outcomes()` is not a pure query: scoring marks properties as ignored in the graph.
+- `Board.resolve_outcomes(...)` is the mutating scoring API: it marks scored graph properties as
+  ignored and should be used by game progression code.
 - In `Graph._update_neighbors_possible_values()`, cached possible-neighbor sets must be copied.
   Reusing mutable `CardOption.possible_neighbors` sets corrupts global card metadata and removes
   legal placements later in a game.
@@ -128,13 +133,7 @@ and candidate generation before committing to a clone-per-action implementation.
 
 ## Known Risks
 
-- `Game.reset()` should be checked for full player-state reset: scores, remaining meeples, and any
-  per-player transient state.
-- Core `Game.rng` seeding should be audited. The human session currently seeds game RNG explicitly.
-- `BasePlayer.id` uses UUID-derived ids; dense stable ids may be better for tensor features.
-- `Game.PLAYER_ID = 0` does not line up with UUID player ids.
 - `Board.get_view()` has dynamic spatial shape. That is acceptable for the GNN direction, but the
   Gymnasium env still needs an explicit observation/action contract.
-- `Board.get_outcomes()` mutates scoring state, so do not call it casually from observation code.
 - UI package distribution depends on including both `pycarcassone.*` packages and
   `pycarcassone/ui/static/*` assets in `pyproject.toml`.

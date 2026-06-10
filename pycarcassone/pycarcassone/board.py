@@ -89,7 +89,8 @@ class Board:
         action = Action((0, 0), Orientation.ROTATE_0, meeple_position=None)
         self.put_card_and_meeple(card, action, player_id=None)
 
-    def get_outcomes(self, complete_property_only: bool, consider_fields: bool) -> Dict[int, StepResult]:
+    def resolve_outcomes(self, complete_property_only: bool, consider_fields: bool) -> Dict[int, StepResult]:
+        """Resolve scoring outcomes and mark scored graph properties as ignored."""
         step_results = defaultdict(StepResult)
         self._get_abbot_outcomes(step_results, complete_property_only)
         self._get_road_outcomes(step_results, complete_property_only)

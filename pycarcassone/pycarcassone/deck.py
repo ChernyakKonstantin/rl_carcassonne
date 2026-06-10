@@ -12,7 +12,8 @@ PATH_TO_CARDS = Path(__file__).parent.joinpath("assets").joinpath("cards.json")
 class Deck:
     def __init__(self, seed: int = 42):
         self._cards = self._load()
-        self.rng = random.Random(seed)
+        self.seed = seed
+        self.rng = random.Random(self.seed)
         self.remaining_cards = None  # NOTE: Set on reset
 
     def _load(self) -> List[Card]:
@@ -30,7 +31,10 @@ class Deck:
         else:
             return len(self.remaining_cards)
 
-    def reset(self):
+    def reset(self, seed: int = None):
+        if seed is not None:
+            self.seed = seed
+        self.rng.seed(self.seed)
         self.remaining_cards = deepcopy(self._cards)
         self.rng.shuffle(self.remaining_cards)
 
