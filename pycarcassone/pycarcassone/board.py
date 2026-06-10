@@ -138,6 +138,9 @@ class Board:
             view[start_y:end_y, start_x:end_x] = card_view
         return view
 
+    def get_tiles_snapshot(self) -> List[Dict]:
+        return self._graph.get_tiles_snapshot()
+
     def get_possible_actions(self, card: Card) -> List[Action]:
         possible_actions = []
         for orientation in card.options.keys():

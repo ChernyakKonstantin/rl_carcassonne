@@ -3,3 +3,4 @@ __pycache__/
 .vscode/
 .understand-anything/
 docs/WORKING_NOTES.md
+logs/

@@ -1,3 +1,4 @@
+from pycarcassone.pycarcassone.card import PossibleNeighbor
 from pycarcassone.pycarcassone.deck import Deck
 from pycarcassone.pycarcassone.graph import Graph
 from pycarcassone.pycarcassone.utils import ConnectorType, Orientation, PixelMeaning
@@ -99,3 +100,20 @@ def test_completed_city_scores_adjacent_field_once():
 
     assert len(owned_field_components) == 1
     assert graph.get_scores_for_field_component(owned_field_components[0]) == 3
+
+
+def test_possible_values_cache_does_not_mutate_card_possible_neighbors():
+    cards = _cards_by_type()
+    card_option = cards[12].get_option(Orientation.ROTATE_0)
+    original_possible_neighbors = set(card_option.possible_neighbors[ConnectorType.E])
+
+    graph = Graph()
+    graph.reset()
+    graph._add_empty_node((1, 2))
+    graph._update_neighbors_possible_values((1, 1), {ConnectorType.E: card_option.possible_neighbors[ConnectorType.E]})
+    graph._update_neighbors_possible_values(
+        (1, 3),
+        {ConnectorType.W: {PossibleNeighbor(cards[3].type, Orientation.ROTATE_0)}},
+    )
+
+    assert card_option.possible_neighbors[ConnectorType.E] == original_possible_neighbors

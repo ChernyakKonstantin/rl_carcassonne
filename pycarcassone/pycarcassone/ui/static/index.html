@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carcassonne</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="toolbar">
+          <button id="new-game" type="button">New</button>
+          <label>Seed <input id="seed" type="number" value="67"></label>
+          <label>Opponents <input id="opponents" type="number" min="1" max="4" value="2"></label>
+        </div>
+        <div id="status" class="status"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Players</h2>
+        <div id="players" class="players"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Current Tile</h2>
+        <div id="current-card" class="current-card"></div>
+        <div id="meeple-controls" class="meeple-controls"></div>
+        <button id="place-action" type="button" disabled>Place</button>
+      </section>
+    </aside>
+
+    <section class="board-area">
+      <div class="board-header">
+        <div id="deck"></div>
+        <div id="selection"></div>
+      </div>
+      <div id="board-scroll" class="board-scroll">
+        <div id="board" class="board"></div>
+      </div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

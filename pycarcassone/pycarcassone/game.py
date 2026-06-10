@@ -88,12 +88,13 @@ class Game:
             possible_actions = []
         return card_is_found, card, possible_actions
 
-    def _loop_step(self) -> bool:
-        current_player = self._get_current_player()
-        card_is_found, card, possible_actions = self._get_card_and_possible_actions()
-        if not card_is_found:
-            return False
-        action = current_player.select_action(card, self.board.get_view(), possible_actions)
+    @staticmethod
+    def get_player_possible_actions(player: BasePlayer, possible_actions: List[Action]) -> List[Action]:
+        if player.remaining_meeples > 0:
+            return possible_actions
+        return [action for action in possible_actions if action.meeple_position is None]
+
+    def apply_player_action(self, current_player: BasePlayer, card: Card, action: Action):
         if action.meeple_position is not None:
             current_player.remaining_meeples -= 1
         self.board.put_card_and_meeple(card, action, current_player.id)
@@ -101,6 +102,15 @@ class Game:
         for player_id, result in step_results.items():
             self.id2player[player_id].scores += result.score
             self.id2player[player_id].return_n_meeples(result.returned_meeples)
+
+    def _loop_step(self) -> bool:
+        current_player = self._get_current_player()
+        card_is_found, card, possible_actions = self._get_card_and_possible_actions()
+        if not card_is_found:
+            return False
+        possible_actions = self.get_player_possible_actions(current_player, possible_actions)
+        action = current_player.select_action(self.board.get_view(), card, possible_actions)
+        self.apply_player_action(current_player, card, action)
         return True
 
     def _process_outcomes(self):

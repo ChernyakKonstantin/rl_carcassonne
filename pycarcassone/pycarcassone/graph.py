@@ -183,7 +183,7 @@ class Graph:
             neighbor_position = self._get_neighbor_position(position, side_name)
             position_node_name = self._find_position_node_name(neighbor_position)
             if self._graph.nodes[position_node_name]["possible_values"] is None:
-                self._graph.nodes[position_node_name]["possible_values"] = possible_neighbors
+                self._graph.nodes[position_node_name]["possible_values"] = set(possible_neighbors)
             elif isinstance(self._graph.nodes[position_node_name]["possible_values"], set):
                 self._graph.nodes[position_node_name]["possible_values"].intersection_update(possible_neighbors)
             else:
@@ -291,6 +291,7 @@ class Graph:
         position_node_name = self._find_position_node_name(card_position)
         self._graph.nodes[position_node_name]["empty"] = False
         self._graph.nodes[position_node_name]["view"] = card.values
+        self._graph.nodes[position_node_name]["properties"] = card.properties
         self._try_add_empty_nodes_around(card_position)
         self._update_neighbors_possible_values(card_position, card.possible_neighbors)
         # NOTE: ----- Complete handling card data. -----
@@ -427,6 +428,39 @@ class Graph:
             else:
                 view[node_data["position"]] = node_data["view"]
         return view
+
+    def get_tiles_snapshot(self) -> List[Dict[str, Any]]:
+        """Return placed tiles with per-property owners for UI and adapter layers."""
+        properties_by_position = dict()
+        for node_name, node_data in self._graph.nodes(data=True):
+            if not isinstance(node_name, tuple) or len(node_name) != 4 or node_name[0] != "property":
+                continue
+            _, y, x, property_index = node_name
+            property_type = node_data.get("property")
+            owners = self.get_property_owners(node_name, real_only=True)
+            properties_by_position.setdefault((y, x), {})[property_index] = {
+                "type": property_type.name if property_type is not None else None,
+                "type_value": int(property_type) if property_type is not None else None,
+                "owner": node_data.get("owner"),
+                "owners": sorted(set(owners)),
+                "ignored": bool(node_data.get("ignore", False)),
+                "shield": bool(node_data.get("shield", False)),
+            }
+
+        tiles = []
+        for node_name, node_data in self._graph.nodes(data=True):
+            if "empty" not in node_data or node_data["empty"]:
+                continue
+            position = node_data["position"]
+            tiles.append(
+                {
+                    "position": position,
+                    "values": node_data["view"],
+                    "properties": node_data.get("properties"),
+                    "property_data": properties_by_position.get(position, {}),
+                }
+            )
+        return sorted(tiles, key=lambda tile: tile["position"])
 
     def find_owned_abbot_nodes_names(self) -> List[Hashable]:
         abbot_nodes_names = self._find_nodes_name_by_attribute_value(

@@ -21,3 +21,6 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pycarcassone"]
+
+[tool.setuptools.package-data]
+pycarcassone = ["ui/static/*"]
