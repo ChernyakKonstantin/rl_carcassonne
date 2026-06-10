@@ -1,156 +1,36 @@
 # Project Notes
 
-These notes are a quick orientation layer for future Codex chats and for the project owner.
-Read `AGENTS.md` first, then this file.
+Quick lookup for future Codex chats. This is not a changelog: keep current project structure,
+contracts, decisions, and active risks here. Read `AGENTS.md` first. If local
+`docs/WORKING_NOTES.md` exists, read it after this file for temporary scratch status.
 
-This file is intended to be a curated, versioned project map. Keep durable architecture,
-contracts, and project direction here. Put volatile chat notes, temporary status, and scratch
-decisions in `docs/WORKING_NOTES.md`; that file is local and gitignored.
+## Project Shape
 
-## Current Goal
+The project has two related layers:
 
-The project is a Carcassonne implementation intended to become the game backend for
-Gymnasium-based RL experiments. The planned RL direction is GNN-based, so dynamic graph-shaped
-observations are an intentional design direction, not a problem by itself.
+- `pycarcassone/`: Carcassonne game engine plus a browser UI for human play.
+- `rl_carcassone/`: future Gymnasium environment, RL agents, neural networks, training code, and
+  related experiments.
 
-The nearest practical goal is a human-play interface on top of the existing engine. The human
-player needs enough game-state visibility to make legal Carcassonne decisions, while the other
-players can remain arbitrary `BasePlayer` subclasses.
+The immediate product goal is a usable human-play UI on top of the engine. The strategic goal is
+to reuse the same engine contracts for RL, especially a GNN-based agent with a variable-size legal
+action set.
 
-For the human interface, the current missing pieces are:
+## Environment
 
-- Clear visualization of which player owns meeples on which properties.
-- Clear display of the current tile.
-- Clear display of all legal placements for the current tile.
-- Ability to rotate the current tile.
-- Ability to place no meeple or place a meeple on a selected legal property.
-- Visible meeple counters for the human player and opponents.
-- Visible number of remaining deck cards.
-
-The human interface should not force an architecture that makes RL integration harder. Prefer
-engine APIs that expose state and legal decisions cleanly, then build both UI and RL adapters on
-top of those APIs.
-
-## Repository Map
-
-- `pycarcassone/` contains the game package.
-- `pycarcassone/pycarcassone/` contains the actual engine code.
-- `pycarcassone/pycarcassone/assets/cards.json` contains processed tile definitions.
-- `pycarcassone/pycarcassone/assets/cards_raw.json` contains source/raw tile data.
-- `pycarcassone/pycarcassone/ui/` contains the browser-based human-play UI and its session
-  adapter.
-- `pycarcassone/tests/` contains game/graph tests.
-- `pycarcassone/dev_tools/` contains notebooks used to prepare/inspect card data.
-- `rl_carcassone/` is reserved for the Gymnasium environment, RL agents, neural networks,
-  training loops, and related code.
-- `rl_carcassone/env/env.py` is currently a commented-out Gymnasium env stub.
-
-## Python Environment
-
-Use the `rl_carcassone` conda environment. In this workspace the interpreter path is:
+Use the `rl_carcassone` conda environment directly by interpreter path:
 
 ```powershell
 & C:/Users/cherniak/miniconda3/envs/rl_carcassone/python.exe
 ```
 
-Example test command:
+Run tests:
 
 ```powershell
 & C:/Users/cherniak/miniconda3/envs/rl_carcassone/python.exe -m pytest pycarcassone\tests -q
 ```
 
-As of 2026-06-10, this command passed: `4 passed`. Pytest may warn that it cannot write cache
-files under some directories because of local permissions.
-
-## Core Engine Responsibilities
-
-- `Game` owns the deck, player order, board, turn loop, scoring application, and rendering entrypoint.
-- `Board` is the public board-level facade. It places cards, computes outcomes, and exposes
-  board-local possible actions.
-- `Graph` is the detailed state model. It stores positions, connectors, properties, owners,
-  property links, field-city borders, completion checks, and scoring helpers.
-- `Deck` loads card definitions and shuffles remaining cards.
-- `Card` and `CardOption` represent tile variants by orientation.
-- `BasePlayer` and its subclasses select actions and own player resources such as score and
-  remaining meeples.
-- `HumanGameSession` in `pycarcassone/pycarcassone/ui/session.py` adapts `Game` for a human UI:
-  it keeps the pending human turn, auto-plays non-human players, and serializes state/actions.
-
-## Turn Flow
-
-Current `Game._loop_step()` flow:
-
-1. Rotate to the next current player.
-2. Draw the next deck card that has at least one board-local legal action.
-3. Ask the player to select one action from the possible actions.
-4. If the selected action places a meeple, decrement the player's remaining meeples.
-5. Place the card and optional meeple through `Board.put_card_and_meeple()`.
-6. Score completed non-field properties and return meeples.
-
-At game end, `Game._process_outcomes()` scores remaining properties and fields.
-
-## Important Contracts
-
-- `Board.get_possible_actions(card)` returns actions legal with respect to the board and the
-  current card: tile position, orientation, and allowed meeple property positions.
-- `Board` does not know the current player's resource state. Actions that require a meeple are
-  player-legal only if the current player has remaining meeples.
-- Existing `RandomPlayer` handles the no-meeples case by filtering out actions with
-  `meeple_position is not None`.
-- Future Gymnasium action masks should be built at the `Game`/`Env` layer, where both
-  `possible_actions` and `current_player.remaining_meeples` are available.
-- `Graph.locate_card_and_meeple()` assumes its inputs are valid and does not perform full
-  validation.
-- `Board.get_outcomes()` is not a pure query: it mutates graph state by marking scored properties
-  as ignored.
-
-## Observation Notes
-
-- `Board.get_view()` currently returns a raster-like numpy array of `PixelMeaning` values.
-- `Board.get_view()` still does not include meeple positions/owners.
-- Meeple ownership is not lost internally: `Graph` stores `owner` on property nodes when a meeple
-  is placed.
-- For the planned GNN-based RL agent, prefer a graph observation adapter over extending
-  `Board.get_view()` as the main RL observation.
-- A useful future graph observation should expose node features, edge indices/features, current
-  tile information, player scores, remaining meeples, current player id, and a legal action list
-  or mask.
-
-## RL Direction
-
-The first RL concept to try is action-conditioned graph evaluation:
-
-1. At a decision point, the environment has the current board state and `N` legal ways to place the
-   current tile: position, orientation, and no meeple or a meeple on a specific property.
-2. Build `N` candidate graph states by cloning the current graph and applying one legal action to
-   each clone.
-3. Send those `N` candidate graphs as a batch through a GNN.
-4. The GNN returns `N` logits, one per legal candidate action.
-5. Apply softmax over the variable-size candidate set and sample/select the action.
-
-This keeps the action space variable-sized, which is natural for Carcassonne. A fixed action space
-is not the preferred design direction for this project.
-
-Performance matters because RL is sample-inefficient. Before committing to the clone-per-action
-approach, benchmark graph cloning and candidate generation. If NetworkX graph cloning becomes a
-bottleneck, consider a faster candidate-state representation, structural sharing, incremental
-features, or scoring action candidates without fully materializing every successor graph.
-
-## Known Issues / Review Notes
-
-- `BasePlayer.select_action()` signature says `(current_board_state, current_card, possible_actions)`,
-  but `Game._loop_step()` currently calls it as `(card, board_view, possible_actions)`.
-- `Game.reset()` resets deck and board, but does not currently reset player scores or remaining
-  meeples.
-- `Game.rng` is created without a seed even though `Deck` is seeded.
-- `BasePlayer.id` uses `uuid4().int`; stable dense player ids may be more convenient for RL.
-- `Game.PLAYER_ID = 0` does not currently line up with `BasePlayer.id` generated by UUID.
-- `Board.get_view()` has dynamic spatial shape. This is acceptable for the planned GNN direction,
-  but Gymnasium integration still needs a clear observation space contract.
-
-## Human UI
-
-The current human UI is browser-based and uses only the Python standard library server:
+Run the human UI:
 
 ```powershell
 & C:/Users/cherniak/miniconda3/envs/rl_carcassone/python.exe -m pycarcassone.pycarcassone.ui.server --host 127.0.0.1 --port 8765
@@ -158,13 +38,103 @@ The current human UI is browser-based and uses only the Python standard library 
 
 Then open `http://127.0.0.1:8765/`.
 
-The UI is intentionally an adapter over the existing engine. It should remain separate from the
-core rules so that RL adapters can reuse the same state/action contracts without depending on UI
-code.
+## Repository Map
 
-## Git History Notes
+- `pycarcassone/pycarcassone/board.py`: board facade and board-local legal actions.
+- `pycarcassone/pycarcassone/graph.py`: detailed NetworkX state model for tiles, connectors,
+  properties, owners, completion, and scoring helpers.
+- `pycarcassone/pycarcassone/game.py`: deck/player turn loop, current-player legality, scoring
+  application, game reset/end handling.
+- `pycarcassone/pycarcassone/player.py`: player abstractions, resources, and action selection.
+- `pycarcassone/pycarcassone/deck.py`: card loading and deck order.
+- `pycarcassone/pycarcassone/assets/cards.json`: processed card definitions.
+- `pycarcassone/pycarcassone/assets/cards_raw.json`: raw/source card definitions.
+- `pycarcassone/pycarcassone/ui/`: stdlib HTTP server, human-game session adapter, and static UI.
+- `pycarcassone/tests/`: engine, graph, and UI-session tests.
+- `pycarcassone/dev_tools/`: notebooks/scripts for card data inspection/preparation.
+- `rl_carcassone/env/env.py`: currently a commented-out Gymnasium env stub.
 
-- Commit `298aa9d0cdef227997dc0828ac65307ca325b39b` added field scoring support, not meeple
-  observation export.
-- Commit `433a42c` separated the game package from the RL package, moving the game from
-  `rl_carcassone/env/game` to `pycarcassone/pycarcassone` with 100% similarity for the moved files.
+## Engine Contracts
+
+- `Board.get_possible_actions(card)` returns actions that are legal for the board and current
+  tile: board position, orientation, and legal meeple property choices.
+- `Board` intentionally does not know current-player resources. Player-resource filtering belongs
+  above the board.
+- `Game.get_player_possible_actions(player, possible_actions)` filters board actions for the
+  current player, including the no-meeples case.
+- `Game.apply_player_action(current_player, card, action)` is the shared path for applying a tile,
+  optional meeple, scoring completed non-field properties, and returning meeples.
+- `Graph.locate_card_and_meeple()` assumes the action is valid. Validation should happen before
+  calling it.
+- `Board.get_outcomes()` is not a pure query: scoring marks properties as ignored in the graph.
+- In `Graph._update_neighbors_possible_values()`, cached possible-neighbor sets must be copied.
+  Reusing mutable `CardOption.possible_neighbors` sets corrupts global card metadata and removes
+  legal placements later in a game.
+
+## State Exports
+
+- `Board.get_view()` returns the older raster-like numpy view of `PixelMeaning` values. It is useful
+  for simple visualization but is not the main intended RL observation.
+- `Board.get_tiles_snapshot()` / `Graph.get_tiles_snapshot()` expose placed tiles and rich property
+  data for adapters:
+  - tile position, values, and properties;
+  - per-property type, owner, connected-component owners, ignored/scored status, and shield flag.
+- The engine internally stores meeple ownership on graph property nodes. UI and RL adapters should
+  prefer graph/snapshot data over inferring ownership from the raster view.
+
+## Human UI Status
+
+The browser UI is an adapter over the engine, not a rule implementation. It currently supports:
+
+- creating a new game with seed and opponent count;
+- human player plus `RandomPlayer` opponents;
+- opponent autoplay until the next human decision;
+- visible deck count, scores, and remaining meeples;
+- board rendering from tile snapshots;
+- current tile previews for every available orientation;
+- selecting orientation by clicking a tile preview;
+- dashed legal-placement targets for the selected orientation;
+- selecting no meeple or a legal meeple property after choosing placement;
+- meeple markers on properties;
+- city shield badges on shielded city properties;
+- striped ownership overlays for field/road/city components using connected-component owners.
+
+Current automated UI coverage is session-level / in-process HTTP coverage. No browser automation
+stack is configured.
+
+UI backlog / open questions:
+
+- improve collision handling between shield badges, meeple markers, and property labels;
+- add a proper game-over/results screen;
+- decide whether large boards need zoom, pan, or fit-to-content.
+
+Rejected or deprioritized UI ideas for now:
+
+- ghost preview of the current tile directly inside legal placements;
+- extra property highlighting before meeple selection.
+
+## RL Direction
+
+The preferred first RL design is action-conditioned graph evaluation:
+
+1. At a decision point, get the current board state and `N` legal actions for the current tile.
+2. Build `N` candidate graph states by applying one legal action per candidate.
+3. Batch those candidate graphs through a GNN.
+4. Produce `N` logits, softmax over the variable-size action set, then sample/select an action.
+
+This keeps Carcassonne's naturally variable action space. A fixed global action space is not the
+preferred design. Performance matters because RL is sample-inefficient; benchmark graph cloning
+and candidate generation before committing to a clone-per-action implementation.
+
+## Known Risks
+
+- `Game.reset()` should be checked for full player-state reset: scores, remaining meeples, and any
+  per-player transient state.
+- Core `Game.rng` seeding should be audited. The human session currently seeds game RNG explicitly.
+- `BasePlayer.id` uses UUID-derived ids; dense stable ids may be better for tensor features.
+- `Game.PLAYER_ID = 0` does not line up with UUID player ids.
+- `Board.get_view()` has dynamic spatial shape. That is acceptable for the GNN direction, but the
+  Gymnasium env still needs an explicit observation/action contract.
+- `Board.get_outcomes()` mutates scoring state, so do not call it casually from observation code.
+- UI package distribution depends on including both `pycarcassone.*` packages and
+  `pycarcassone/ui/static/*` assets in `pyproject.toml`.
