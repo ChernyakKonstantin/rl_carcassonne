@@ -1,72 +1,146 @@
+"""Session adapter between the browser UI and the engine `GameEngine`.
+
+The session owns UI-facing metadata and JSON serialization. It relies on
+`GameEngine.current_turn` as the source of truth for the pending engine decision and
+autoplays bot players until a manual player must act.
+"""
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from ..card import Card, CardOption
-from ..game import Game
-from ..player import BasePlayer, RandomPlayer
+from ..game import GameEngine
+from ..player import ActionSelectionContext, PlayerState, RandomPlayer
 from ..utils import Action, Orientation, PixelMeaning
 
 
-class HumanPlayer(BasePlayer):
-    def select_action(self, current_board_state, current_card: Card, possible_actions: List[Action]) -> Action:
-        raise RuntimeError("Human actions must be selected through HumanGameSession.apply_action")
-
-
 @dataclass
-class PendingTurn:
-    player: BasePlayer
-    card: Card
-    actions: List[Action]
+class PlayerSetup:
+    name: str
+    kind: str
+    onnx_path: Optional[str] = None
 
 
-class HumanGameSession:
-    def __init__(self, seed: int = 67, n_opponents: int = 2):
-        if n_opponents < 1:
-            raise ValueError("At least one opponent is required.")
-        if n_opponents > 4:
-            raise ValueError("At most four opponents are supported.")
+class GameSession:
+    KIND_HUMAN = "human"
+    KIND_RANDOM_BOT = "random_bot"
+    KIND_ONNX_BOT = "onnx_bot"
+    DEFAULT_PLAYERS = [
+        {"name": "You", "kind": KIND_HUMAN},
+        {"name": "Bot 1", "kind": KIND_RANDOM_BOT},
+        {"name": "Bot 2", "kind": KIND_RANDOM_BOT},
+    ]
+
+    def __init__(
+        self,
+        seed: int = 67,
+        players: Optional[List[Dict[str, Any]]] = None,
+    ):
         self.seed = seed
-        self.n_opponents = n_opponents
-        self.human = HumanPlayer()
-        self.players: List[BasePlayer] = [self.human]
-        self.players.extend(RandomPlayer(seed + 1000 + i) for i in range(n_opponents))
-        self.game = Game(list(self.players), seed=seed, enable_render=False)
-        self.pending_turn: Optional[PendingTurn] = None
+        self.player_setups = self._normalize_player_setups(players)
+        self.players: List[PlayerState] = []
+        self.manual_player_ids = set()
+        self.player_meta: Dict[int, Dict[str, Any]] = {}
+        self._build_players()
+        self.game = GameEngine(list(self.players), seed=seed)
         self.terminal = False
         self.message = ""
         self.game.reset()
-        self._advance_to_human_turn()
+        self._bind_player_metadata_after_game_id_assignment()
+        self._advance_to_next_manual_turn()
 
-    def _advance_to_human_turn(self):
-        self.pending_turn = None
+    @classmethod
+    def _normalize_player_setups(
+        cls,
+        players: Optional[List[Dict[str, Any]]],
+    ) -> List[PlayerSetup]:
+        if not players:
+            players = cls.DEFAULT_PLAYERS
+        if len(players) < 2:
+            raise ValueError("At least two players are required.")
+        if len(players) > 5:
+            raise ValueError("At most five players are supported.")
+        result = []
+        for index, player in enumerate(players):
+            name = str(player.get("name") or f"Player {index + 1}").strip() or f"Player {index + 1}"
+            kind = str(player.get("kind") or cls.KIND_HUMAN)
+            onnx_path = player.get("onnx_path")
+            if kind not in {cls.KIND_HUMAN, cls.KIND_RANDOM_BOT, cls.KIND_ONNX_BOT}:
+                raise ValueError(f"Unknown player kind: {kind}")
+            result.append(PlayerSetup(name=name, kind=kind, onnx_path=onnx_path))
+        return result
+
+    def _build_players(self):
+        for index, setup in enumerate(self.player_setups):
+            if setup.kind == self.KIND_HUMAN:
+                player = PlayerState()
+            elif setup.kind == self.KIND_RANDOM_BOT:
+                player = RandomPlayer(self.seed + 1000 + index)
+            elif setup.kind == self.KIND_ONNX_BOT:
+                raise ValueError("ONNX bot support is not implemented yet.")
+            else:
+                raise ValueError(f"Unknown player kind: {setup.kind}")
+            self.players.append(player)
+
+    def _bind_player_metadata_after_game_id_assignment(self):
+        self.manual_player_ids = set()
+        self.player_meta = {}
+        for setup, player in zip(self.player_setups, self.players):
+            is_manual = setup.kind == self.KIND_HUMAN
+            if is_manual:
+                self.manual_player_ids.add(player.id)
+            self.player_meta[player.id] = {
+                "name": setup.name,
+                "kind": setup.kind,
+                "manual": is_manual,
+                "onnx_path": setup.onnx_path,
+            }
+        if len(self.manual_player_ids) == 0:
+            raise ValueError("At least one human player is required.")
+
+    def _advance_to_next_manual_turn(self):
         while True:
-            current_player = self.game._get_current_player()
-            card_is_found, card, possible_actions = self.game._get_card_and_possible_actions()
-            if not card_is_found:
-                self.game._process_outcomes()
-                self.terminal = True
-                self.message = "Game over."
-                return
+            turn = self.game.advance_to_next_turn()
+            if turn is None:
+                break
+            if turn.player.id in self.manual_player_ids:
+                break
+            select_action = getattr(turn.player, "select_action", None)
+            if not callable(select_action):
+                raise RuntimeError(
+                    f"Player {turn.player.id} cannot be autoplayed; use a manual player or a bot with select_action(context)."
+                )
+            action = select_action(
+                ActionSelectionContext(
+                    board=self.game.board,
+                    player=turn.player,
+                    card=turn.card,
+                    actions=turn.actions,
+                )
+            )
+            self.game.apply_turn_action(action)
+        self.terminal = self.game.terminal
+        self.message = self._message_for_state()
 
-            possible_actions = self.game.get_player_possible_actions(current_player, possible_actions)
-            if current_player.id == self.human.id:
-                self.pending_turn = PendingTurn(current_player, card, possible_actions)
-                self.message = "Your turn."
-                return
-
-            action = current_player.select_action(self.game.board.get_view(), card, possible_actions)
-            self.game.apply_player_action(current_player, card, action)
+    def _message_for_state(self) -> str:
+        if self.terminal:
+            return "GameEngine over."
+        turn = self.game.current_turn
+        if turn is None:
+            return ""
+        player_name = self.player_meta[turn.player.id]["name"]
+        if player_name == "You":
+            return "Your turn."
+        return f"{player_name}'s turn."
 
     def apply_action(self, action_index: int):
         if self.terminal:
-            raise ValueError("Game is already over.")
-        if self.pending_turn is None:
-            raise RuntimeError("No pending human turn.")
-        if action_index < 0 or action_index >= len(self.pending_turn.actions):
-            raise ValueError(f"Unknown action index: {action_index}")
-        action = self.pending_turn.actions[action_index]
-        self.game.apply_player_action(self.pending_turn.player, self.pending_turn.card, action)
-        self._advance_to_human_turn()
+            raise ValueError("GameEngine is already over.")
+        turn = self.game.current_turn
+        if turn is None or turn.player.id not in self.manual_player_ids:
+            raise RuntimeError("No pending manual turn.")
+        self.game.apply_turn_action_by_index(action_index)
+        self._advance_to_next_manual_turn()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -75,7 +149,7 @@ class HumanGameSession:
             "seed": self.seed,
             "deck_remaining": len(self.game.deck),
             "players": self._serialize_players(),
-            "human_player_id": str(self.human.id),
+            "manual_player_ids": [str(player_id) for player_id in sorted(self.manual_player_ids)],
             "board": {
                 "tiles": [self._serialize_tile(tile) for tile in self.game.board.get_tiles_snapshot()],
             },
@@ -85,13 +159,16 @@ class HumanGameSession:
     def _serialize_players(self) -> List[Dict[str, Any]]:
         result = []
         for idx, player in enumerate(self.players):
+            meta = self.player_meta[player.id]
             result.append(
                 {
                     "id": str(player.id),
-                    "label": "You" if player.id == self.human.id else f"P{idx + 1}",
+                    "label": meta["name"],
+                    "kind": meta["kind"],
+                    "manual": meta["manual"],
                     "score": player.scores,
                     "remaining_meeples": player.remaining_meeples,
-                    "human": player.id == self.human.id,
+                    "human": meta["manual"],
                     "color": self._player_color(idx),
                 }
             )
@@ -127,13 +204,22 @@ class HumanGameSession:
         }
 
     def _serialize_turn(self) -> Optional[Dict[str, Any]]:
-        if self.pending_turn is None:
+        turn = self.game.current_turn
+        if turn is None:
             return None
         return {
-            "card": self._serialize_card(self.pending_turn.card),
-            "actions": [
-                self._serialize_action(index, action) for index, action in enumerate(self.pending_turn.actions)
-            ],
+            "player": self._serialize_turn_player(turn.player),
+            "card": self._serialize_card(turn.card),
+            "actions": [self._serialize_action(index, action) for index, action in enumerate(turn.actions)],
+        }
+
+    def _serialize_turn_player(self, player: PlayerState) -> Dict[str, Any]:
+        meta = self.player_meta[player.id]
+        return {
+            "id": str(player.id),
+            "label": meta["name"],
+            "kind": meta["kind"],
+            "manual": meta["manual"],
         }
 
     @classmethod
@@ -175,3 +261,6 @@ class HumanGameSession:
             "angle": int(action.orientation) * 90,
             "meeple_position": action.meeple_position,
         }
+
+
+HumanGameSession = GameSession

@@ -55,20 +55,21 @@ def test_tiles_snapshot_exposes_city_shield():
 
 
 def test_human_session_state_is_json_serializable_and_has_legal_actions():
-    session = HumanGameSession(seed=67, n_opponents=2)
+    session = HumanGameSession(seed=67)
 
     state = session.to_dict()
 
     json.dumps(state)
     assert state["message"] == "Your turn."
     assert state["current_turn"] is not None
+    assert state["current_turn"]["player"]["label"] == "You"
     assert len(state["current_turn"]["actions"]) > 0
     assert len(state["board"]["tiles"]) > 0
     assert "owners" in state["board"]["tiles"][0]["property_data"][0]
 
 
 def test_human_session_serializes_current_card_shields():
-    session = HumanGameSession(seed=67, n_opponents=2)
+    session = HumanGameSession(seed=67)
 
     state = session.to_dict()
     shielded_city_properties = [
@@ -82,7 +83,7 @@ def test_human_session_serializes_current_card_shields():
 
 
 def test_human_session_applies_human_action_and_advances_back_to_human():
-    session = HumanGameSession(seed=67, n_opponents=2)
+    session = HumanGameSession(seed=67)
     state = session.to_dict()
     action_index = state["current_turn"]["actions"][0]["index"]
 
@@ -93,3 +94,95 @@ def test_human_session_applies_human_action_and_advances_back_to_human():
     if not next_state["terminal"]:
         assert next_state["current_turn"] is not None
         assert len(next_state["current_turn"]["actions"]) > 0
+
+
+def test_session_waits_for_each_manual_player():
+    session = HumanGameSession(
+        seed=67,
+        players=[
+            {"name": "Alice", "kind": "human"},
+            {"name": "Bob", "kind": "human"},
+        ],
+    )
+
+    state = session.to_dict()
+
+    assert state["current_turn"]["player"]["manual"]
+    assert state["current_turn"]["player"]["label"] in {"Alice", "Bob"}
+    assert state["message"] in {"Alice's turn.", "Bob's turn."}
+
+
+def test_session_autoplays_random_bots_until_manual_player():
+    session = HumanGameSession(
+        seed=67,
+        players=[
+            {"name": "Alice", "kind": "human"},
+            {"name": "Bot", "kind": "random_bot"},
+        ],
+    )
+
+    state = session.to_dict()
+
+    assert state["current_turn"]["player"]["label"] == "Alice"
+    assert state["current_turn"]["player"]["manual"]
+
+
+def test_session_rejects_onnx_bot_until_runtime_adapter_exists():
+    try:
+        HumanGameSession(
+            seed=67,
+            players=[
+                {"name": "Alice", "kind": "human"},
+                {"name": "Model", "kind": "onnx_bot", "onnx_path": "model.onnx"},
+            ],
+        )
+    except ValueError as exc:
+        assert "ONNX bot support is not implemented yet" in str(exc)
+    else:
+        raise AssertionError("ONNX bot setup must fail until runtime adapter exists")
+
+
+def test_session_accepts_configured_random_bots():
+    session = HumanGameSession(
+        seed=67,
+        players=[
+            {"name": "You", "kind": "human"},
+            {"name": "Bot A", "kind": "random_bot"},
+            {"name": "Bot B", "kind": "random_bot"},
+        ],
+    )
+
+    state = session.to_dict()
+
+    assert [player["label"] for player in state["players"]] == ["You", "Bot A", "Bot B"]
+    assert state["players"][1]["kind"] == "random_bot"
+
+
+def test_session_accepts_multiple_manual_players():
+    session = HumanGameSession(
+        seed=67,
+        players=[
+            {"name": "Alice", "kind": "human"},
+            {"name": "Friend", "kind": "human"},
+        ],
+    )
+
+    state = session.to_dict()
+
+    assert [player["label"] for player in state["players"]] == ["Alice", "Friend"]
+    assert all(player["manual"] for player in state["players"])
+
+
+def test_session_rejects_game_without_manual_player():
+    try:
+        HumanGameSession(
+            seed=67,
+            players=[
+                {"name": "Bot A", "kind": "random_bot"},
+                {"name": "Bot B", "kind": "random_bot"},
+            ],
+        )
+    except ValueError as exc:
+        assert "At least one human player is required" in str(exc)
+    else:
+        raise AssertionError("A UI session must have at least one manual player")

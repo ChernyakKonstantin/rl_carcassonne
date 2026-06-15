@@ -19,6 +19,42 @@ class PropertyComponent:
 
 
 class Graph:
+    """
+    NetworkX representation of the Carcassonne board state.
+
+    The internal graph is naturally heterogeneous. Node type is encoded in the
+    first item of the tuple node name and each node family has its own
+    attributes:
+
+    - ``("position", y, x)`` nodes represent board cells. They are created for
+      both placed tiles and empty frontier cells. Attributes:
+      ``position`` as ``(y, x)``, ``empty`` flag, ``view`` with the 5x5 tile
+      values for placed tiles, ``properties`` with the 5x5 property-index map
+      for placed tiles, and ``possible_values`` with legal neighboring card
+      type/orientation pairs for empty cells.
+    - ``("connector", y, x, connector)`` nodes represent tile exits on a side
+      or side segment. Their main attribute is ``connector``.
+    - ``("property", y, x, property_index)`` nodes represent tile properties:
+      field, road, city, or abbot. Attributes include ``property``, ``owner``,
+      and ``ignore``. City properties may also have ``shield``.
+
+    Edges also carry type-specific meaning:
+
+    - position-to-connector edges attach a cell to its connector nodes;
+    - property-to-connector edges attach growing properties to their exits and
+      carry ``path_for`` with the property type;
+    - connector-to-connector edges link matching neighboring properties and
+      carry ``path_for`` with the property type;
+    - abbot property-to-position edges attach an abbot to its tile;
+    - field-to-city edges with ``relation == FIELD_CITY_BORDER`` encode
+      farmer scoring adjacency.
+
+    Adapter layers that expose this graph to learning code should preserve this
+    heterogeneity when possible. A homogeneous numeric tensor can be built on
+    top of ``get_graph_snapshot()``, but filling unrelated feature slots with
+    placeholders is an adapter concern, not an invariant of this class.
+    """
+
     FIELD_CITY_BORDER = "field_city_border"
 
     def __init__(self):
@@ -418,16 +454,12 @@ class Graph:
                 possible_meeple_positions.append(property_index)
         return possible_meeple_positions
 
-    def get_view(self) -> Dict[Tuple[int, int], str]:
-        view = dict()
-        for node_name, node_data in self._graph.nodes(data=True):
-            if "empty" not in node_data:
-                continue  # NOTE: Wrong node type.
-            elif node_data["empty"]:
-                continue  # NOTE: Nothing to show
-            else:
-                view[node_data["position"]] = node_data["view"]
-        return view
+    def get_graph_snapshot(self) -> Dict[str, List]:
+        """Return graph nodes and edges for adapter-level observation builders."""
+        return {
+            "nodes": [(node_name, dict(node_data)) for node_name, node_data in self._graph.nodes(data=True)],
+            "edges": [(source, target, dict(edge_data)) for source, target, edge_data in self._graph.edges(data=True)],
+        }
 
     def get_tiles_snapshot(self) -> List[Dict[str, Any]]:
         """Return placed tiles with per-property owners for UI and adapter layers."""

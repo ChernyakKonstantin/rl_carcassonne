@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -18,6 +19,10 @@ class StepResult:
 class Board:
     def __init__(self):
         self._graph = Graph()
+
+    def clone(self) -> "Board":
+        """Return an independent board copy for previews and adapter-side branching."""
+        return deepcopy(self)
 
     def _apply_majority_outcome(
         self,
@@ -109,38 +114,30 @@ class Board:
             meeple_position=action.meeple_position,
         )
 
-    def get_view(self) -> np.ndarray:
-        # TODO: I need to return meeples positions somehow!
-        CELL_SIZE = 5
-        position_to_values = self._graph.get_view()
-        ys, xs = [], []
-        for y, x in position_to_values.keys():
-            xs.append(x)
-            ys.append(y)
-        min_x = min(xs)
-        max_x = max(xs)
-        min_y = min(ys)
-        max_y = max(ys)
-        width = (max_x - min_x + 1) * CELL_SIZE
-        height = (max_y - min_y + 1) * CELL_SIZE
-        view = np.zeros((height, width), dtype=np.int32)
-
-        for (y, x), value in position_to_values.items():
-            x -= min_x
-            y -= min_y
-            start_x = x * CELL_SIZE
-            end_x = start_x + CELL_SIZE
-            start_y = y * CELL_SIZE
-            end_y = start_y + CELL_SIZE
-            card_view = np.reshape(
-                [PixelMeaning.from_symbol(v).value for v in value],
-                (CELL_SIZE, CELL_SIZE),
-            )
-            view[start_y:end_y, start_x:end_x] = card_view
-        return view
-
     def get_tiles_snapshot(self) -> List[Dict]:
         return self._graph.get_tiles_snapshot()
+
+    def get_graph_snapshot(self) -> Dict[str, List]:
+        return self._graph.get_graph_snapshot()
+
+    def preview_action_graph_snapshot(self, card: Card, action: Action, player_id: int) -> Dict[str, List]:
+        """Return the graph snapshot after applying an action to a board copy.
+
+        The real board is not mutated. This preview applies tile placement and
+        optional meeple placement only; it does not resolve scoring outcomes.
+        """
+        board = self.clone()
+        board.put_card_and_meeple(card, action, player_id)
+        return board.get_graph_snapshot()
+
+    def get_action_candidate_graph_snapshots(
+        self,
+        card: Card,
+        actions: List[Action],
+        player_id: int,
+    ) -> List[Dict[str, List]]:
+        """Return one preview graph snapshot per legal action candidate."""
+        return [self.preview_action_graph_snapshot(card, action, player_id) for action in actions]
 
     def get_possible_actions(self, card: Card) -> List[Action]:
         possible_actions = []

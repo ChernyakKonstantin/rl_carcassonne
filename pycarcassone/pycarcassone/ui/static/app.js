@@ -3,6 +3,11 @@ let state = null;
 let selectedOrientation = 0;
 let selectedPosition = null;
 let selectedMeeple = null;
+const playerKindLabels = {
+  human: "Human",
+  random_bot: "Random bot",
+  onnx_bot: "ONNX bot"
+};
 
 const propertyNames = {
   FIELD: "Field",
@@ -20,18 +25,24 @@ async function fetchState() {
 }
 
 async function newGame() {
+  document.getElementById("setup-error").textContent = "";
   const seed = Number(document.getElementById("seed").value || 67);
-  const nOpponents = Number(document.getElementById("opponents").value || 2);
+  const payload = {seed, players: collectPlayerSetup()};
   const response = await fetch("/api/new", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({seed, n_opponents: nOpponents})
+    body: JSON.stringify(payload)
   });
   state = await response.json();
+  if (state.error) {
+    document.getElementById("setup-error").textContent = state.error;
+    return;
+  }
   selectedOrientation = 0;
   selectedPosition = null;
   selectedMeeple = null;
   normalizeSelection();
+  showGame();
   render();
 }
 
@@ -63,7 +74,11 @@ function normalizeSelection() {
 }
 
 function render() {
+  if (!state) {
+    return;
+  }
   renderStatus();
+  renderCurrentPlayer();
   renderPlayers();
   renderCurrentCard();
   renderBoard();
@@ -84,20 +99,47 @@ function renderStatus() {
 function renderPlayers() {
   const container = document.getElementById("players");
   container.replaceChildren();
+  const currentPlayerId = state.current_turn?.player?.id;
   for (const player of state.players) {
     const row = document.createElement("div");
     row.className = "player";
+    if (player.id === currentPlayerId) {
+      row.classList.add("current");
+    }
     const swatch = document.createElement("span");
     swatch.className = "swatch";
     swatch.style.background = player.color;
     const name = document.createElement("strong");
     name.textContent = player.label;
+    const kind = document.createElement("span");
+    kind.className = "player-kind";
+    kind.textContent = playerKindLabels[player.kind] ?? player.kind;
     const stats = document.createElement("span");
     stats.className = "player-stats";
     stats.textContent = `${player.score} pts / ${player.remaining_meeples} meeples`;
-    row.append(swatch, name, stats);
+    row.append(swatch, name, kind, stats);
     container.append(row);
   }
+}
+
+function renderCurrentPlayer() {
+  const container = document.getElementById("current-player");
+  container.replaceChildren();
+  const currentPlayer = state.current_turn?.player;
+  if (!currentPlayer) {
+    container.textContent = "Game over";
+    return;
+  }
+  const player = state.players.find(item => item.id === currentPlayer.id);
+  const swatch = document.createElement("span");
+  swatch.className = "swatch";
+  swatch.style.background = player?.color ?? "#888";
+  const name = document.createElement("strong");
+  name.textContent = currentPlayer.label;
+  const kind = document.createElement("span");
+  kind.className = "player-kind";
+  kind.textContent = playerKindLabels[currentPlayer.kind] ?? currentPlayer.kind;
+  container.append(swatch, name, kind);
 }
 
 function renderCurrentCard() {
@@ -279,7 +321,7 @@ function renderTile(values, properties, propertyData, showPropertyLabels, size =
     meeple.style.left = `${center.x}%`;
     meeple.style.top = `${center.y}%`;
     meeple.style.background = player.color;
-    meeple.textContent = player.label === "You" ? "Y" : player.label.replace("P", "");
+    meeple.textContent = player.label.slice(0, 1).toUpperCase();
     tile.append(meeple);
   }
   return tile;
@@ -485,6 +527,84 @@ function placeAt(element, position, bounds) {
   element.style.top = `${(position.y - bounds.minY) * TILE_SIZE}px`;
 }
 
-document.getElementById("new-game").addEventListener("click", newGame);
+function showGame() {
+  document.getElementById("setup-screen").classList.add("hidden");
+  document.getElementById("game-screen").classList.remove("hidden");
+}
+
+function showSetup() {
+  document.getElementById("game-screen").classList.add("hidden");
+  document.getElementById("setup-screen").classList.remove("hidden");
+}
+
+function collectPlayerSetup() {
+  return collectRows(document.querySelectorAll("#player-setup .player-setup-row"));
+}
+
+function collectRows(rows) {
+  return [...rows].map((row, index) => ({
+    name: row.querySelector(".player-name").value || `Player ${index + 1}`,
+    kind: row.querySelector(".player-kind-select").value,
+    onnx_path: row.querySelector(".onnx-path").value || null
+  }));
+}
+
+function renderPlayerSetupRows() {
+  const container = document.getElementById("player-setup");
+  const existing = collectRows(container.querySelectorAll(".player-setup-row"));
+  const count = Number(document.getElementById("player-count").value || 2);
+  container.replaceChildren();
+  for (let index = 0; index < count; index += 1) {
+    const setup = existing[index] ?? defaultPlayerSetup(index);
+    container.append(playerSetupRow(index, setup));
+  }
+}
+
+function defaultPlayerSetup(index) {
+  if (index === 0) {
+    return {name: "You", kind: "human", onnx_path: null};
+  }
+  return {name: `Bot ${index}`, kind: "random_bot", onnx_path: null};
+}
+
+function playerSetupRow(index, setup) {
+  const row = document.createElement("div");
+  row.className = "player-setup-row";
+
+  const name = document.createElement("input");
+  name.className = "player-name";
+  name.type = "text";
+  name.value = setup.name;
+  name.placeholder = `Player ${index + 1}`;
+
+  const kind = document.createElement("select");
+  kind.className = "player-kind-select";
+  for (const [value, label] of Object.entries(playerKindLabels)) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    kind.append(option);
+  }
+  kind.value = setup.kind;
+
+  const onnxPath = document.createElement("input");
+  onnxPath.className = "onnx-path";
+  onnxPath.type = "text";
+  onnxPath.placeholder = "model.onnx";
+  onnxPath.value = setup.onnx_path ?? "";
+
+  const syncOnnxVisibility = () => {
+    onnxPath.disabled = kind.value !== "onnx_bot";
+  };
+  kind.addEventListener("change", syncOnnxVisibility);
+  syncOnnxVisibility();
+
+  row.append(name, kind, onnxPath);
+  return row;
+}
+
+document.getElementById("start-game").addEventListener("click", newGame);
+document.getElementById("show-setup").addEventListener("click", showSetup);
 document.getElementById("place-action").addEventListener("click", placeAction);
-fetchState();
+document.getElementById("player-count").addEventListener("change", renderPlayerSetupRows);
+renderPlayerSetupRows();

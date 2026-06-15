@@ -25,7 +25,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -49,7 +50,8 @@ button.active {
   background: #dbeafe;
 }
 
-input {
+input,
+select {
   width: 76px;
   border: 1px solid #bbc2ca;
   border-radius: 6px;
@@ -57,10 +59,54 @@ input {
   padding: 0 8px;
 }
 
+select {
+  width: auto;
+  background: #fff;
+}
+
 .app {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
   min-height: 100vh;
+}
+
+.setup-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.setup-card {
+  width: min(720px, 100%);
+  border: 1px solid #cfc7b8;
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 22px;
+  box-shadow: 0 12px 36px rgba(31, 36, 40, 0.14);
+}
+
+.setup-header h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+}
+
+.setup-header p {
+  margin: 0 0 18px;
+  color: var(--muted);
+}
+
+.setup-error {
+  min-height: 20px;
+  margin-top: 10px;
+  color: #b42318;
+}
+
+.start-game {
+  width: 100%;
+  margin-top: 10px;
+  border-color: #74c0fc;
+  background: #e7f5ff;
 }
 
 .sidebar {
@@ -88,11 +134,40 @@ input {
   align-items: end;
 }
 
-.toolbar label {
+.toolbar.setup-toolbar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.toolbar label,
+.setup-block label {
   display: grid;
   gap: 4px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.setup-block {
+  margin-top: 8px;
+}
+
+.hidden {
+  display: none;
+}
+
+.player-setup {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.player-setup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+}
+
+.player-setup-row input {
+  width: 100%;
 }
 
 .status {
@@ -107,9 +182,19 @@ input {
 
 .player {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
+  grid-template-columns: 14px 1fr auto auto;
   gap: 8px;
   align-items: center;
+  min-height: 34px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.player.current {
+  border-color: var(--accent);
+  background: #e7f5ff;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .swatch {
@@ -122,6 +207,23 @@ input {
 .player-stats {
   color: var(--muted);
   font-size: 12px;
+}
+
+.player-kind {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.current-player {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: #e7f5ff;
 }
 
 .current-card {

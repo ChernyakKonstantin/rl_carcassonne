@@ -4,8 +4,7 @@ version = "0.1"
 authors = [
   {name = "Konstantin Cherniak", email = "chernyakonstantin@gmail.com"},
 ]
-description = "Materials for a blog about mastering Carcassone game with RL."
-readme = "README.md"
+description = "Gymnasium environment and baseline RL agent for playing Carcassonne."
 
 requires-python = ">= 3.12"
 dependencies = [

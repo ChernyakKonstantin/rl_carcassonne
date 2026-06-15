@@ -1,3 +1,9 @@
+"""HTTP entrypoint for the browser UI.
+
+This module intentionally stays thin: it serves static frontend assets, exposes
+JSON endpoints, and delegates all game/session behavior to `HumanGameSession`.
+"""
+
 import argparse
 import json
 from http import HTTPStatus
@@ -41,9 +47,12 @@ class CarcassonneUiHandler(BaseHTTPRequestHandler):
         if self.path == "/api/new":
             body = self._read_json()
             seed = int(body.get("seed", 67))
-            n_opponents = int(body.get("n_opponents", 2))
+            players = body.get("players")
             try:
-                self.__class__.session = HumanGameSession(seed=seed, n_opponents=n_opponents)
+                self.__class__.session = HumanGameSession(
+                    seed=seed,
+                    players=players,
+                )
             except ValueError as exc:
                 self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                 return
