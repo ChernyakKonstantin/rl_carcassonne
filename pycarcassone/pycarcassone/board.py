@@ -1,5 +1,4 @@
 from collections import defaultdict
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -22,7 +21,9 @@ class Board:
 
     def clone(self) -> "Board":
         """Return an independent board copy for previews and adapter-side branching."""
-        return deepcopy(self)
+        board = Board()
+        board._graph = self._graph.clone()
+        return board
 
     def _apply_majority_outcome(
         self,

@@ -61,6 +61,36 @@ class Graph:
         self._graph = None
         self._n_calls = None
 
+    def clone(self) -> "Graph":
+        """Return an independent graph copy for short-lived placement previews."""
+        graph = Graph()
+        graph._n_calls = self._n_calls
+        if self._graph is None:
+            graph._graph = None
+            return graph
+        # NetworkX.copy() is a hot path for RL action previews; copying the
+        # same node/edge dictionaries directly avoids its generic add_* overhead.
+        graph._graph = nx.Graph()
+        graph._graph.graph.update(self._graph.graph)
+        graph._graph._node = {}
+        graph._graph._adj = {node_name: {} for node_name in self._graph._adj}
+
+        for node_name, node_data in self._graph._node.items():
+            node_data_copy = dict(node_data)
+            possible_values = node_data_copy.get("possible_values")
+            if isinstance(possible_values, set):
+                node_data_copy["possible_values"] = set(possible_values)
+            graph._graph._node[node_name] = node_data_copy
+
+        for source, neighbors in self._graph._adj.items():
+            for target, edge_data in neighbors.items():
+                if target in graph._graph._adj[source]:
+                    continue
+                edge_data_copy = dict(edge_data)
+                graph._graph._adj[source][target] = edge_data_copy
+                graph._graph._adj[target][source] = edge_data_copy
+        return graph
+
     @staticmethod
     def _position_node_name(position: Tuple[int, int]) -> Tuple[str, int, int]:
         y, x = position

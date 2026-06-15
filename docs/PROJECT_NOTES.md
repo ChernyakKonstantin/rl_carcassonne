@@ -108,6 +108,10 @@ Then open `http://127.0.0.1:8765/`.
   calling it.
 - `Board.resolve_outcomes(...)` is the mutating scoring API: it marks scored graph properties as
   ignored and should be used by game progression code.
+- `Board.clone()` is optimized for preview branching and delegates to `Graph.clone()` instead of
+  generic `deepcopy`. `Graph.clone()` copies the NetworkX structure and node/edge attribute dicts,
+  including fresh `possible_values` sets for frontier positions, but does not deep-copy immutable
+  card metadata.
 - In `Graph._update_neighbors_possible_values()`, cached possible-neighbor sets must be copied.
   Reusing mutable `CardOption.possible_neighbors` sets corrupts global card metadata and removes
   legal placements later in a game.
@@ -177,14 +181,17 @@ The preferred first RL design is action-conditioned graph evaluation:
 4. Produce `N` logits, softmax over the variable-size action set, then sample/select an action.
 
 This keeps Carcassonne's naturally variable action space. A fixed global action space is not the
-preferred design. Performance matters because RL is sample-inefficient; benchmark graph cloning
-and candidate generation before committing to a clone-per-action implementation.
+preferred design. Performance matters because RL is sample-inefficient. The current implementation
+keeps the candidate-graph contract but avoids the original naive clone-per-action path where
+possible.
 
 For the first implementation, `CarcassonneEnv` returns candidate graphs directly in the observation
-instead of using a separate wrapper. The environment builds `N` graph previews directly from the
-live `GameTurn.card`, `GameTurn.actions`, and board state, without reconstructing `CardOption` from
-the encoded observation. A separate candidate-graph wrapper can still be introduced later if other
-agent types need a lighter base observation.
+instead of using a separate wrapper. The environment builds candidate previews from the live
+`GameTurn.card`, `GameTurn.actions`, and board state, without reconstructing `CardOption` from the
+encoded observation. Internally it groups actions by tile placement `(position, orientation)` and
+derives meeple variants by changing only the encoded owner feature for the placed property node.
+A separate candidate-graph wrapper can still be introduced later if other agent types need a
+lighter base observation.
 
 Training keeps the trainable agent in player slot `0` inside `CarcassonneEnv`. Inference adapters
 for the web UI may run the same policy for any engine-assigned `player.id`, so they must build
@@ -224,8 +231,10 @@ The observation is a `spaces.Dict`:
 Observation field notes:
 
 - `action_candidate_graphs` is the only legal-action representation exposed to the policy. Candidate
-  graph `i` is produced by applying the live engine action `current_turn.actions[i]` to a board copy;
-  `env.step(i)` applies that same action to the real game.
+  graph `i` semantically represents applying the live engine action `current_turn.actions[i]` to a
+  board copy; `env.step(i)` applies that same action to the real game. The implementation may reuse
+  placement previews across meeple/no-meeple variants as long as the encoded candidate graph is
+  equivalent.
 - `players` is a dense table sorted by engine player id, with rows `[player_id, score,
   remaining_meeples]`. In `CarcassonneEnv`, the trainable agent is always player `0`.
 - `player_order` is the current engine turn order as player ids, preserving which players act before
@@ -243,11 +252,18 @@ Current reward is `agent_score_delta` between agent decisions, including points 
 opponent autoplay if they complete the agent's properties. This is a baseline contract and can be
 changed deliberately when reward shaping starts.
 
+Current RL env performance baseline after preview optimization: on seed `67`, two random
+opponents, and always choosing action index `0`, a complete episode takes about 11.5 seconds on the
+current development machine for 24 agent decisions and 2301 total candidate graphs. This is much
+faster than the original clone-per-action `deepcopy` path, but still expensive for serious training.
+
 ## Known Risks
 
-- Candidate graph generation is implemented as clone-per-action board preview. Benchmark before
-  training seriously; this may become a bottleneck and may need incremental graph-copy
-  optimization.
+- Candidate graph generation is still expensive because each unique tile placement preview copies
+  the board graph and encodes a full heterogeneous graph. Further training-scale optimization may
+  need direct incremental graph encoding or a lighter base observation.
+- `Graph.clone()` uses NetworkX private `_node`/`_adj` structures for speed. Keep regression tests
+  around preview immutability and candidate equivalence if NetworkX is upgraded.
 - Observation feature normalization/encoding is intentionally simple numeric encoding. Revisit it
   before training serious GNN policies.
 - UI package distribution depends on including both `pycarcassone.*` packages and

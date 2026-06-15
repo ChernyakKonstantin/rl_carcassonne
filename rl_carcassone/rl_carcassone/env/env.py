@@ -6,7 +6,7 @@ from gymnasium import spaces
 
 from pycarcassone.game import GameEngine
 from pycarcassone.player import PlayerState, RandomPlayer
-from pycarcassone.utils import ConnectorType, PixelMeaning
+from pycarcassone.utils import Action, ConnectorType, PixelMeaning
 
 from .spaces import DynamicDiscrete, HeterogeneousGraph, HeterogeneousGraphInstance
 
@@ -68,6 +68,7 @@ class CarcassonneEnv(gym.Env):
     POSITION_FEATURE_SIZE = 3
     CONNECTOR_FEATURE_SIZE = 1
     PROPERTY_FEATURE_SIZE = 5
+    PROPERTY_OWNER_FEATURE_INDEX = 1
     COORD_LOW = -10_000
     COORD_HIGH = 10_000
 
@@ -234,26 +235,73 @@ class CarcassonneEnv(gym.Env):
         }
 
     def _make_observation(self) -> Dict[str, Any]:
-        snapshot = self.game_engine.get_state_snapshot()
         turn = self._current_agent_turn()
         if turn is None:
             action_candidate_graphs = ()
         else:
-            action_candidate_graphs = tuple(
-                self._encode_graph_snapshot(graph_snapshot)
-                for graph_snapshot in self.game_engine.board.get_action_candidate_graph_snapshots(
-                    turn.card,
-                    turn.actions,
-                    player_id=self.agent.id,
-                )
-            )
+            action_candidate_graphs = self._make_action_candidate_graphs(turn)
 
         return {
             "action_candidate_graphs": action_candidate_graphs,
             "players": self._encode_players(),
-            "player_order": np.array(snapshot.player_order, dtype=np.int32),
-            "n_remaining_cards": int(snapshot.deck_remaining),
+            "player_order": np.array([player.id for player in self.game_engine.players], dtype=np.int32),
+            "n_remaining_cards": len(self.game_engine.deck),
         }
+
+    def _make_action_candidate_graphs(self, turn) -> Tuple[HeterogeneousGraphInstance, ...]:
+        placement_previews: Dict[
+            Tuple[Tuple[int, int], Any],
+            Tuple[HeterogeneousGraphInstance, Dict[Hashable, Tuple[str, int]]],
+        ] = {}
+        candidate_graphs = []
+        for action in turn.actions:
+            placement_key = (action.position, action.orientation)
+            if placement_key not in placement_previews:
+                placement_action = Action(
+                    position=action.position,
+                    orientation=action.orientation,
+                    meeple_position=None,
+                )
+                graph_snapshot = self.game_engine.board.preview_action_graph_snapshot(
+                    turn.card,
+                    placement_action,
+                    player_id=self.agent.id,
+                )
+                placement_previews[placement_key] = self._encode_graph_snapshot_with_indices(graph_snapshot)
+            graph, node_indices = placement_previews[placement_key]
+            if action.meeple_position is None:
+                candidate_graphs.append(graph)
+            else:
+                candidate_graphs.append(
+                    self._with_meeple_owner(
+                        graph,
+                        node_indices,
+                        action.position,
+                        action.meeple_position,
+                        self.agent.id,
+                    )
+                )
+        return tuple(candidate_graphs)
+
+    def _with_meeple_owner(
+        self,
+        graph: HeterogeneousGraphInstance,
+        node_indices: Dict[Hashable, Tuple[str, int]],
+        position: Tuple[int, int],
+        meeple_position: int,
+        player_id: int,
+    ) -> HeterogeneousGraphInstance:
+        y, x = position
+        property_node_name = ("property", y, x, meeple_position)
+        node_type, property_node_index = node_indices[property_node_name]
+        if node_type != "property":
+            raise ValueError(f"Meeple node is not a property node: {property_node_name!r}")
+
+        nodes = dict(graph.nodes)
+        property_nodes = nodes["property"].copy()
+        property_nodes[property_node_index, self.PROPERTY_OWNER_FEATURE_INDEX] = player_id
+        nodes["property"] = property_nodes
+        return HeterogeneousGraphInstance(nodes=nodes, edge_links=graph.edge_links, edges=graph.edges)
 
     def _encode_players(self) -> np.ndarray:
         return np.array(
@@ -265,6 +313,13 @@ class CarcassonneEnv(gym.Env):
         )
 
     def _encode_graph_snapshot(self, graph_snapshot: Dict[str, List]) -> HeterogeneousGraphInstance:
+        graph, _ = self._encode_graph_snapshot_with_indices(graph_snapshot)
+        return graph
+
+    def _encode_graph_snapshot_with_indices(
+        self,
+        graph_snapshot: Dict[str, List],
+    ) -> Tuple[HeterogeneousGraphInstance, Dict[Hashable, Tuple[str, int]]]:
         nodes: Dict[str, List[np.ndarray]] = {
             "position": [],
             "connector": [],
@@ -283,7 +338,7 @@ class CarcassonneEnv(gym.Env):
             edge_type, link = self._encode_edge(source, target, edge_data, node_indices)
             edge_links[edge_type].append(link)
 
-        return HeterogeneousGraphInstance(
+        graph = HeterogeneousGraphInstance(
             nodes={
                 node_type: self._feature_array(features, self._node_feature_size(node_type))
                 for node_type, features in nodes.items()
@@ -294,6 +349,7 @@ class CarcassonneEnv(gym.Env):
             },
             edges=None,
         )
+        return graph, node_indices
 
     @staticmethod
     def _node_type(node_name: Hashable) -> str:
