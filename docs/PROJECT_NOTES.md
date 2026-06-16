@@ -78,8 +78,8 @@ Then open `http://127.0.0.1:8765/`.
 - `rl_carcassone/rl_carcassone/utils/`: local RL utilities such as config loading, explained
   variance, and single-episode rollout collection.
 - `rl_carcassone/tests/`: RL environment contract tests.
-- `scripts/train_ppo.py`: single-process PPO training entry point driven by a YAML experiment
-  config.
+- `scripts/train_ppo.py`: PPO training entry point driven by a YAML experiment config. Rollouts
+  are always collected by one or more subprocess workers.
 - `config/`: experiment YAML configs; `config/ppo_baseline.yaml` is the current baseline training
   config.
 
@@ -291,22 +291,52 @@ PPO is implemented locally in `rl_carcassone/rl_carcassone/algorithm/ppo/ppo.py`
 - PPO minibatches are lists of graph observations because each step has a variable-size legal
   action set;
 - `to_train_actor=False` supports critic-only warmup iterations.
+- `data/storage.py` persists full `Episode` objects with metadata through atomic `.tmp` to `.pt`
+  renames. This is intended for worker-produced intermediate storage and future offline datasets.
+- `utils/rollout_worker_pool.py` provides `RolloutWorker` and `RolloutWorkerPool`. Each
+  `RolloutWorker` is the command handler running inside one subprocess: it owns its
+  `CarcassonneEnv` and actor copy, receives `update_weights` commands that load the current
+  `latest` actor weights, collects complete train/validation episodes, writes them to disk, and
+  returns paths. `RolloutWorkerPool` is the trainer-facing facade that starts workers, broadcasts
+  commands, and gathers paths before the trainer reads episodes back into RAM for PPO updates.
+- Worker-pool calls are synchronous from the trainer's perspective. `update_weights(...)` blocks
+  until every worker confirms the new actor weights, and `collect_episodes(...)` blocks until every
+  worker has finished its assigned complete episodes and returned file paths. The trainer does not
+  scan or read intermediate storage while workers are still collecting.
+- Episode storage uses `.tmp` files followed by an atomic rename to `.pt`. This is a storage-level
+  invariant: a visible `.pt` file is a complete serialized episode. It is not the trainer/worker
+  synchronization mechanism; synchronization comes from the blocking worker responses.
+- Trainer and rollout-worker devices are configured separately. The trainer builds the trainable
+  actor-critic on `experiment.trainer_device`; each worker builds its rollout actor copy on
+  `experiment.worker_device` and maps `latest/actor.pt` to that device when weights are updated.
+  The intended baseline mode is GPU training with CPU rollout inference.
 
 Training is configured with YAML rather than many CLI flags. `scripts/train_ppo.py` accepts only
 `--config-path` and reads:
 
-- `experiment`: output directory, neural-network device, optional actor/critic checkpoint paths;
+- `experiment`: output directory, trainer neural-network device, rollout-worker inference device,
+  optional actor/critic checkpoint paths;
 - `environment`: `CarcassonneEnv` seed and opponent count;
-- `algorithm`: rollout counts, PPO hyperparameters, actor warmup period, and `policy_kwargs`;
+- `collection`: subprocess worker count (`n_workers >= 1`) plus intermediate storage directory
+  name;
+- `algorithm`: per-worker rollout counts, PPO hyperparameters, actor warmup period, and
+  `policy_kwargs`;
 - `algorithm.policy_kwargs`: actor/critic class paths, model kwargs, optimizer kwargs,
   initialization method, and `ortho_init`.
 
-`config/ppo_baseline.yaml` is the current baseline config. Training writes the resolved config,
+`config/ppo_baseline.yaml` is the current baseline config and uses `trainer_device: cuda` with
+`worker_device: cpu`. `config/ppo_smoke.yaml` stays CPU-only for lightweight pipeline checks.
+Training writes the resolved config,
 flat `progress.csv` scalar metrics for table viewers, `per_epoch_critic_data.jsonl` critic
-diagnostics, `latest` / `final` actor-critic checkpoints, and intermediate checkpoints under
-`checkpoints/after_<N>_train_episodes` where `N` is the number of collected training episodes.
+diagnostics, initial and per-iteration `latest` actor-critic checkpoints, worker-produced episodes
+under `intermediate_storage/policy_<version>/{train,val}/worker_<id>`, and intermediate checkpoints
+under `checkpoints/after_<N>_train_episodes` where `N` is the number of collected training
+episodes.
 The validation rollout branching-factor column (`val_rollout/legal_action_count_mean`) is omitted
 from `progress.csv` to keep the table focused on primary training metrics.
+Rollout episode counts follow stable-baselines3-style per-worker semantics:
+`algorithm.n_train_episodes: 20` with `collection.n_workers: 5` collects 100 training episodes
+before the PPO update.
 
 Current RL env performance baseline after preview optimization: on seed `67`, two random
 opponents, and always choosing action index `0`, a complete episode takes about 11.5 seconds on the
@@ -318,16 +348,19 @@ faster than the original clone-per-action `deepcopy` path, but still expensive f
 - Candidate graph generation is still expensive because each unique tile placement preview copies
   the board graph and encodes a full heterogeneous graph. Further training-scale optimization may
   need direct incremental graph encoding or a lighter base observation.
-- PPO training is currently single-process and calls actor/critic on variable-size graph
-  observations step by step. This is correct for the current contract but not yet throughput
-  optimized.
+- PPO training still calls actor/critic on variable-size graph observations step by step, but
+  rollout collection can now be parallelized through subprocess workers. Throughput is still
+  limited by full candidate-graph generation and serialization cost.
 - Current training is ready for smoke and pipeline experiments, but not yet for reliable
   quality-focused runs. The main unresolved experiment risks are rollout throughput, missing
-  parallel episode collection, no fixed evaluation protocol against random/player baselines,
-  incomplete reproducibility control for torch/numpy training randomness, and no full run resume
-  contract beyond loading actor/critic weights.
+  scale testing of the subprocess worker pool, no fixed evaluation protocol against random/player
+  baselines, incomplete reproducibility control for torch/numpy training randomness, and no full run
+  resume contract beyond loading actor/critic weights.
 - Intermediate checkpoints are saved every training iteration by collected episode count. Long
   experiments may need retention or pruning rules to avoid unbounded disk growth.
+- Worker intermediate episode files are large because each step stores full graph observations and
+  candidate action graphs. The latest subprocess smoke run produced tens of MB per episode, so
+  offline dataset accumulation will need compression, schema optimization, or cleanup policy.
 - `Graph.clone()` uses NetworkX private `_node`/`_adj` structures for speed. Keep regression tests
   around preview immutability and candidate equivalence if NetworkX is upgraded.
 - Observation feature normalization/encoding is intentionally simple numeric encoding. Revisit it

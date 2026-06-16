@@ -22,7 +22,10 @@ class BaseCritic(nn.Module):
         return self.value_net(latent_vf).squeeze(-1)
 
     def load(self, load_dir: Path) -> None:
-        self.load_state_dict(torch.load(load_dir.joinpath("critic.pt"), map_location=self.device), strict=True)
+        self.load_state_dict(
+            torch.load(load_dir.joinpath("critic.pt"), map_location=self.device, weights_only=True),
+            strict=True,
+        )
 
     def save(self, save_dir: Union[str, Path]) -> None:
         if not isinstance(save_dir, Path):

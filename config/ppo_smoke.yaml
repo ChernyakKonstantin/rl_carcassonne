@@ -1,12 +1,17 @@
 experiment:
   experiment_dir: smoke_logs/ppo_smoke
-  device: cpu
+  trainer_device: cpu
+  worker_device: cpu
   actor_start_from: null
   critic_start_from: null
 
 environment:
   seed: 42
   n_opponents: 1
+
+collection:
+  n_workers: 2
+  storage_dirname: intermediate_storage
 
 algorithm:
   total_iterations: 1

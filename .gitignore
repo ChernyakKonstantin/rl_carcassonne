@@ -4,3 +4,6 @@ __pycache__/
 .understand-anything/
 docs/WORKING_NOTES.md
 logs/
+smoke_logs/
+experiments/
+.pytest_cache/

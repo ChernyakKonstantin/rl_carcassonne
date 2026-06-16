@@ -1,12 +1,17 @@
 experiment:
   experiment_dir: experiments/ppo
-  device: cpu
+  trainer_device: cuda
+  worker_device: cpu
   actor_start_from: null
   critic_start_from: null
 
 environment:
   seed: 42
   n_opponents: 1
+
+collection:
+  n_workers: 1
+  storage_dirname: intermediate_storage
 
 algorithm:
   total_iterations: 10
