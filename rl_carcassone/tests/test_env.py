@@ -1,6 +1,6 @@
 import pytest
 
-from rl_carcassone.rl_carcassone import CarcassonneEnv
+from rl_carcassone.env import CarcassonneEnv
 
 
 def test_env_reset_returns_agent_turn_observation_inside_space():

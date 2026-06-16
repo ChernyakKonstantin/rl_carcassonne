@@ -1,0 +1,44 @@
+experiment:
+  experiment_dir: smoke_logs/ppo_smoke
+  device: cpu
+  actor_start_from: null
+  critic_start_from: null
+
+environment:
+  seed: 42
+  n_opponents: 1
+
+algorithm:
+  total_iterations: 1
+  warmup_iterations: 0
+  n_train_episodes: 1
+  n_val_episodes: 1
+  batch_size: 4
+  clip_range: 0.2
+  clip_range_vf: 0.2
+  ent_coef: 0.01
+  gae_lambda: 0.95
+  gamma: 0.99
+  max_grad_norm: 0.5
+  n_epochs: 1
+  normalize_advantage: true
+  target_kl: null
+  policy_kwargs:
+    actor_kwargs:
+      module_path: rl_carcassone.policy.actor
+      class_name: Actor
+      hidden_dim: 32
+      num_layers: 1
+      heads: 2
+    actor_optimizer_kwargs:
+      lr: 0.0003
+    critic_kwargs:
+      module_path: rl_carcassone.policy.critic
+      class_name: Critic
+      hidden_dim: 32
+      num_layers: 1
+      heads: 2
+    critic_optimizer_kwargs:
+      lr: 0.001
+    init_method: orthogonal
+    ortho_init: true

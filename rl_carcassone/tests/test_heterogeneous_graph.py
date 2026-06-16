@@ -1,7 +1,7 @@
 import numpy as np
 from gymnasium import spaces
 
-from rl_carcassone.rl_carcassone.env.spaces import HeterogeneousGraph, HeterogeneousGraphInstance
+from rl_carcassone.env.spaces import HeterogeneousGraph, HeterogeneousGraphInstance
 
 
 def test_heterogeneous_graph_contains_typed_nodes_and_edges():

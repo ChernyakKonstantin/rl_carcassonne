@@ -36,6 +36,12 @@ Run game + RL tests from the repository root:
 & C:/Users/cherniak/miniconda3/envs/rl_carcassone/python.exe -m pytest pycarcassone\tests rl_carcassone\tests -q
 ```
 
+Run the current local PPO trainer:
+
+```powershell
+& C:/Users/cherniak/miniconda3/envs/rl_carcassone/python.exe scripts/train_ppo.py --config-path config/ppo_baseline.yaml
+```
+
 The RL package imports the sibling game package from the repository checkout during local
 development. If running `rl_carcassone` as an isolated installed package, install `pycarcassone`
 as well or add it to `PYTHONPATH`.
@@ -68,7 +74,14 @@ Then open `http://127.0.0.1:8765/`.
 - `rl_carcassone/rl_carcassone/algorithm/`: RL algorithms, starting with PPO scaffolding.
 - `rl_carcassone/rl_carcassone/policy/`: policy components, including actor, critic, and feature
   extractor packages.
+- `rl_carcassone/rl_carcassone/data/episode.py`: raw-observation rollout containers used by PPO.
+- `rl_carcassone/rl_carcassone/utils/`: local RL utilities such as config loading, explained
+  variance, and single-episode rollout collection.
 - `rl_carcassone/tests/`: RL environment contract tests.
+- `scripts/train_ppo.py`: single-process PPO training entry point driven by a YAML experiment
+  config.
+- `config/`: experiment YAML configs; `config/ppo_baseline.yaml` is the current baseline training
+  config.
 
 ## Engine Contracts
 
@@ -252,6 +265,49 @@ Current reward is `agent_score_delta` between agent decisions, including points 
 opponent autoplay if they complete the agent's properties. This is a baseline contract and can be
 changed deliberately when reward shaping starts.
 
+## RL Policy And Training
+
+The current trainable policy is an action-conditioned heterogeneous-graph actor:
+
+- `policy/features_extractor/graph.py` converts candidate `HeterogeneousGraphInstance` observations
+  to PyG `HeteroData`, adds reverse edge types, and runs `HGTConv` layers.
+- Node encoders are typed: connector type, property type, and owner id use embeddings; property
+  flags use numeric features; `property_index` is intentionally ignored by the extractor. Position
+  nodes currently encode the `empty` flag by default and do not use absolute board coordinates
+  unless `include_position_coordinates=True`.
+- `Actor` returns one categorical-action logit per legal candidate graph. `Critic` pools candidate
+  graph embeddings into a scalar value estimate.
+- Policy constructors use the concrete environment-space contract in type annotations:
+  `observation_space: gymnasium.spaces.Dict` and, for the actor, `action_space: DynamicDiscrete`.
+- `AsymmetricActorCriticPolicy` is the actor/critic container with separate builders, optimizers,
+  checkpoint load/save, and initialization. It currently gives actor and critic the same observation
+  contract, but is kept as an extension point for a richer training-only critic observation later.
+
+PPO is implemented locally in `rl_carcassone/rl_carcassone/algorithm/ppo/ppo.py`:
+
+- rollouts store raw environment observations, integer action indices, log probabilities, rewards,
+  values, advantages, and returns in `Episode` / `Episodes`;
+- `play_single_episode(...)` collects one non-vectorized episode from `CarcassonneEnv`;
+- PPO minibatches are lists of graph observations because each step has a variable-size legal
+  action set;
+- `to_train_actor=False` supports critic-only warmup iterations.
+
+Training is configured with YAML rather than many CLI flags. `scripts/train_ppo.py` accepts only
+`--config-path` and reads:
+
+- `experiment`: output directory, neural-network device, optional actor/critic checkpoint paths;
+- `environment`: `CarcassonneEnv` seed and opponent count;
+- `algorithm`: rollout counts, PPO hyperparameters, actor warmup period, and `policy_kwargs`;
+- `algorithm.policy_kwargs`: actor/critic class paths, model kwargs, optimizer kwargs,
+  initialization method, and `ortho_init`.
+
+`config/ppo_baseline.yaml` is the current baseline config. Training writes the resolved config,
+flat `progress.csv` scalar metrics for table viewers, `per_epoch_critic_data.jsonl` critic
+diagnostics, `latest` / `final` actor-critic checkpoints, and intermediate checkpoints under
+`checkpoints/after_<N>_train_episodes` where `N` is the number of collected training episodes.
+The validation rollout branching-factor column (`val_rollout/legal_action_count_mean`) is omitted
+from `progress.csv` to keep the table focused on primary training metrics.
+
 Current RL env performance baseline after preview optimization: on seed `67`, two random
 opponents, and always choosing action index `0`, a complete episode takes about 11.5 seconds on the
 current development machine for 24 agent decisions and 2301 total candidate graphs. This is much
@@ -262,6 +318,16 @@ faster than the original clone-per-action `deepcopy` path, but still expensive f
 - Candidate graph generation is still expensive because each unique tile placement preview copies
   the board graph and encodes a full heterogeneous graph. Further training-scale optimization may
   need direct incremental graph encoding or a lighter base observation.
+- PPO training is currently single-process and calls actor/critic on variable-size graph
+  observations step by step. This is correct for the current contract but not yet throughput
+  optimized.
+- Current training is ready for smoke and pipeline experiments, but not yet for reliable
+  quality-focused runs. The main unresolved experiment risks are rollout throughput, missing
+  parallel episode collection, no fixed evaluation protocol against random/player baselines,
+  incomplete reproducibility control for torch/numpy training randomness, and no full run resume
+  contract beyond loading actor/critic weights.
+- Intermediate checkpoints are saved every training iteration by collected episode count. Long
+  experiments may need retention or pruning rules to avoid unbounded disk growth.
 - `Graph.clone()` uses NetworkX private `_node`/`_adj` structures for speed. Keep regression tests
   around preview immutability and candidate equivalence if NetworkX is upgraded.
 - Observation feature normalization/encoding is intentionally simple numeric encoding. Revisit it

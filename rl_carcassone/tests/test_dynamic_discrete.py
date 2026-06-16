@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from rl_carcassone.rl_carcassone.env.spaces import DynamicDiscrete
+from rl_carcassone.env.spaces import DynamicDiscrete
 
 
 def test_dynamic_discrete_contains_non_negative_integer_by_default():

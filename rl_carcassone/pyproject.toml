@@ -20,6 +20,9 @@ dependencies = [
   "gymnasium",
   "scipy",
   "pytest",
+  "PyYAML",
+  "torch",
+  "torch-geometric",
 ]
 
 keywords = [
