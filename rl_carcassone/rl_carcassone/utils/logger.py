@@ -1,5 +1,7 @@
 import csv
 import json
+import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -79,3 +81,33 @@ class ExperimentLogger:
         json_str = json.dumps(per_epoch_critic_data) + "\n"
         with open(self.per_epoch_fname, "a") as f:
             f.write(json_str)
+
+
+class EventLogger:
+    """Append timestamped trainer events to a plain text log file."""
+
+    def __init__(self, directory: Union[str, Path], filename: str = "events.log") -> None:
+        if isinstance(directory, str):
+            directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        self.fname = directory.joinpath(filename)
+
+    def log(self, event: str, **fields: Any) -> None:
+        line = f"{self._timestamp()} | {event}"
+        if fields:
+            details = " | ".join(f"{key}={value}" for key, value in fields.items())
+            line = f"{line} | {details}"
+        with open(self.fname, "a") as f:
+            f.write(f"{line}\n")
+
+    def log_exception(self, exc: BaseException) -> None:
+        self.log("error", message=str(exc))
+        formatted_traceback = traceback.format_exc()
+        with open(self.fname, "a") as f:
+            f.write(formatted_traceback)
+            if not formatted_traceback.endswith("\n"):
+                f.write("\n")
+
+    @staticmethod
+    def _timestamp() -> str:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]

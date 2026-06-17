@@ -8,7 +8,7 @@ from rl_carcassone.algorithm import train_ppo
 from rl_carcassone.data import load_episodes
 from rl_carcassone.env import CarcassonneEnv
 from rl_carcassone.policy.utils import build_policy
-from rl_carcassone.utils import ExperimentLogger, RolloutWorkerPool
+from rl_carcassone.utils import EventLogger, ExperimentLogger, RolloutWorkerPool
 from rl_carcassone.utils.config import load_config, save_config
 
 
@@ -41,6 +41,8 @@ def main(config_path: Path) -> None:
     run_dir = experiment_dir.joinpath(datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
     run_dir.mkdir(parents=True, exist_ok=True)
     save_config(config, run_dir)
+    event_logger = EventLogger(run_dir)
+    event_logger.log("run_started")
 
     env = CarcassonneEnv(
         seed=environment_config["seed"],
@@ -49,6 +51,7 @@ def main(config_path: Path) -> None:
     policy = build_policy(env, algorithm_config, device=trainer_device)
     _load_starting_weights(policy, experiment_config)
     policy.save(run_dir.joinpath("latest"))
+    event_logger.log("initial_checkpoint_saved")
 
     total_iterations = algorithm_config["total_iterations"]
     warmup_iterations = algorithm_config["warmup_iterations"]
@@ -75,32 +78,46 @@ def main(config_path: Path) -> None:
     n_workers = collection_config["n_workers"]
     if n_workers < 1:
         raise ValueError("collection.n_workers must be at least 1.")
-    worker_pool = RolloutWorkerPool(
-        config=config,
-        run_dir=run_dir,
-        n_workers=n_workers,
-        storage_dirname=collection_config["storage_dirname"],
-    )
+    total_train_episodes = total_iterations * n_workers * n_train_episodes
+    worker_pool = None
+    completed = False
     try:
+        worker_pool = RolloutWorkerPool(
+            config=config,
+            run_dir=run_dir,
+            n_workers=n_workers,
+            storage_dirname=collection_config["storage_dirname"],
+            event_logger=event_logger,
+        )
+        event_logger.log("worker_pool_started")
         for iteration in range(total_iterations):
+            event_logger.log("iteration_started", iteration=iteration)
             iteration_seed = seed + iteration * 10_000
+            event_logger.log("update_weights_sent")
             worker_pool.update_weights(policy_version=iteration, actor_dir=run_dir.joinpath("latest"))
+            event_logger.log("update_weights_completed")
+            event_logger.log("collect_episodes_sent")
             collected_paths = worker_pool.collect_episodes(
                 policy_version=iteration,
                 n_train_episodes=n_train_episodes,
                 n_val_episodes=n_val_episodes,
                 seed=iteration_seed,
             )
+            event_logger.log("collect_episodes_completed")
+            event_logger.log("episodes_load_started")
             train_episodes = load_episodes(collected_paths.train_paths)
             val_episodes = load_episodes(collected_paths.val_paths)
+            event_logger.log("episodes_load_completed")
 
             to_train_actor = iteration >= warmup_iterations
+            event_logger.log("ppo_update_started", train_actor=str(to_train_actor).lower())
             train_stats = train_ppo(
                 policy,
                 train_episodes,
                 to_train_actor=to_train_actor,
                 **train_kwargs,
             )
+            event_logger.log("ppo_update_completed")
             passed_train_episodes += len(train_episodes)
             row = {
                 "iteration": iteration,
@@ -118,21 +135,31 @@ def main(config_path: Path) -> None:
                 passed_episodes=passed_train_episodes,
                 elapsed_time=row["elapsed_seconds"],
             )
+            event_logger.log("metrics_logged")
             policy.save(run_dir.joinpath("checkpoints", f"after_{passed_train_episodes}_train_episodes"))
+            event_logger.log("checkpoint_saved")
             policy.save(run_dir.joinpath("latest"))
-
-            print(
-                f"iter={iteration + 1}/{total_iterations} "
-                f"train_episodes={passed_train_episodes} "
-                f"train_reward={row['train_rollout']['ep_reward_mean']:.3f} "
-                f"val_reward={row['val_rollout']['ep_reward_mean']:.3f} "
-                f"steps={row['train_rollout']['total_steps']:.0f} "
-                f"train_actor={to_train_actor}"
+            event_logger.log("latest_checkpoint_saved")
+            event_logger.log(
+                "iteration_completed",
+                iteration=iteration,
+                train_episodes_done=passed_train_episodes,
             )
-    finally:
-        worker_pool.close()
 
-    print(f"Saved run to {run_dir}")
+            print(f"train episodes: {passed_train_episodes}/{total_train_episodes}")
+        completed = True
+    except Exception as exc:
+        event_logger.log_exception(exc)
+        raise
+    finally:
+        if worker_pool is not None:
+            event_logger.log("worker_pool_closing")
+            worker_pool.close()
+            event_logger.log("worker_pool_closed")
+
+    if completed:
+        event_logger.log("run_completed")
+    print("Completed")
 
 
 if __name__ == "__main__":

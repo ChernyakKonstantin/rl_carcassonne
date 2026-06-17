@@ -3,11 +3,12 @@ import traceback
 from dataclasses import dataclass
 from multiprocessing.connection import Connection
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from rl_carcassone.data import save_episode_atomic
 from rl_carcassone.env import CarcassonneEnv
 from rl_carcassone.policy.utils import build_policy
+from rl_carcassone.utils.logger import EventLogger
 
 from .play_single_episode import play_single_episode
 
@@ -189,12 +190,14 @@ class RolloutWorkerPool:
         run_dir: Union[str, Path],
         n_workers: int,
         storage_dirname: str,
+        event_logger: Optional[EventLogger] = None,
     ) -> None:
         if n_workers < 1:
             raise ValueError("RolloutWorkerPool requires n_workers >= 1.")
         self.config = config
         self.run_dir = Path(run_dir)
         self.n_workers = n_workers
+        self.event_logger = event_logger
         self.storage_dir = self.run_dir.joinpath(storage_dirname)
         self._context = mp.get_context("spawn")
         self._workers = []
@@ -324,5 +327,10 @@ class RolloutWorkerPool:
                 raise RuntimeError(f"Unexpected worker response: {response!r}")
             if response.get("policy_version") != policy_version:
                 raise RuntimeError(f"Unexpected policy version in worker response: {response!r}")
+            if self.event_logger is not None:
+                if response_type == "weights_updated":
+                    self.event_logger.log("worker_weights_updated", worker_id=response["worker_id"])
+                elif response_type == "episodes_collected":
+                    self.event_logger.log("worker_episodes_collected", worker_id=response["worker_id"])
             responses.append(response)
         return responses
