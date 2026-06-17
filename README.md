@@ -139,6 +139,23 @@ The environment is designed around Carcassonne's dynamic action space:
 
 This keeps the action space close to the real structure of the game instead of flattening all possible moves into a large fixed action space.
 
+## Training PPO
+
+From the repository root, run the baseline PPO training config:
+
+```powershell
+& python.exe scripts/train_ppo.py --config-path config/ppo_baseline.yaml
+```
+
+For a shorter CPU-only pipeline smoke check:
+
+```powershell
+& python.exe scripts/train_ppo.py --config-path config/ppo_smoke.yaml
+```
+
+Training outputs are written under `experiments/ppo/<timestamp>/`. The baseline config uses CUDA
+for PPO updates and CPU rollout workers unless the config is changed.
+
 ## Baseline agents
 
 The project includes random agent that is useful for:
